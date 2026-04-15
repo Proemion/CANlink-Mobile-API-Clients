@@ -1,4 +1,4 @@
-# clmapi - Protomolecule Python Module
+# clmprotoclient - Protomolecule Python Module
 
 The module simplifies interaction with the CLM10k via the protocol buffers
 based websocket API. It provides convenience methods which will create the
@@ -18,7 +18,7 @@ Install from PyPI using `pip`:
 pip install clmprotoclient
 ```
 
-## clmapi.clmlib
+## clmprotoclient.clmlib
 
 The clmlib submodule provides the `clm10k` class which is basically a
 convenience wrapper around proto generation and websocket communication.
@@ -32,7 +32,7 @@ The responses from the unit are forwarded as is in proto messages, these
 messages already present the data in a well structured way, so it does not make
 much sense to repack it.
 
-Make sure to also include the `clmapi.clmapi_pb2` module in your code.
+Make sure to also include the `clmprotoclient.clmapi_pb2` module in your code.
 
 ### Instantiation
 
@@ -522,8 +522,8 @@ synchronization.
 ```
 #!/usr/bin/env python3
 
-from clmapi import clmlib
-from clmapi import clmapi_pb2
+from clmprotoclient import clmlib
+from clmprotoclient import clmapi_pb2
 import threading
 
 evt = threading.Event() # we will use the event to wait for certain states

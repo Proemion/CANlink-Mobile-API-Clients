@@ -5,7 +5,7 @@ from grpc_tools import protoc
 def build(setup_kwargs):
     root = os.path.dirname(os.path.abspath(__file__))
     proto_file = os.path.join(root, "clmapi.proto")
-    out_dir = os.path.join(root, "clmapi")
+    out_dir = os.path.join(root, "clmprotoclient")
 
     ret = protoc.main([
         "grpc_tools.protoc",
@@ -16,3 +16,6 @@ def build(setup_kwargs):
 
     if ret != 0:
         raise RuntimeError(f"protoc exited with code {ret}")
+
+if __name__ == "__main__":
+    build()

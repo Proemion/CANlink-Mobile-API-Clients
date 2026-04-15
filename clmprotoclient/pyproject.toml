@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-clmshell = "clmapi.clmshell:main"
+clmshell = "clmprotoclient.clmshell:main"
 
 [project.urls]
 Repository = "https://github.com/Proemion/CANlink-Mobile-API-Clients"
@@ -43,4 +43,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 build = "build.py"
-packages = [{include = "clmapi"}]
+packages = [{include = "clmprotoclient"}]
