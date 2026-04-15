@@ -23,15 +23,6 @@ pip install clmprotoclient
 # Building
 We use [poetry](https://python-poetry.org) as build system. 
 
-### Build a version for a new version of the device API 
-For this use-case you can replace the `clmapi.proto` with a new version and then run a new build. The latest version of 
-`clmapi.proto` can be downloaded under https://www.proemion.com/download-center -> Devices.
-
-
-### Building custom versions
-In case you need a custom version, e.g. because you might have a different proto API version running on your 
-device you can replace the `clmapi.proto` with your custom version and then run a new build with poetry build.
-
 
 # Contributing
 We encourage you to contribute. In case you can not find an pull request reviewer please do not hesitate to reach 

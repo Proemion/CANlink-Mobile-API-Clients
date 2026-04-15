@@ -23,7 +23,7 @@ import copy
 import ssl
 import os
 
-from . import clmapi_pb2
+from clmprotowrapper import clmapi_pb2
 
 class clm10k:
     """

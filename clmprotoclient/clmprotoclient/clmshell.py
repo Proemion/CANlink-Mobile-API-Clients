@@ -22,7 +22,7 @@ import threading
 import pyparsing as pp
 
 from clmprotoclient import clmlib
-import clmapi_pb2
+from clmprotowrapper import clmapi_pb2
 
 from dateutil import parser
 from tabulate import tabulate
