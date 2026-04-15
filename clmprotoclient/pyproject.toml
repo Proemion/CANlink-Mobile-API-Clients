@@ -44,6 +44,3 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 build = "build.py"
 packages = [{include = "clmprotoclient"}]
-include = [
-    {path = "clmprotoclient/clmapi_pb2.py"}
-]
