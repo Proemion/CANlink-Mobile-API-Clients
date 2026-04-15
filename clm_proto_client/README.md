@@ -12,10 +12,11 @@ module and which allows to configure the device from a command line prompt.
 
 ## Installation
 
-The package is provided as a `.whl`, i.e. Python wheel, which can be installed
-using the `pip` utility:
+Install from PyPI using `pip`:
 
-`pip install /path/to/clm10k_protomolecule-1.0.0-py2.py3-none-any.whl`
+```
+pip install clm-proto-client
+```
 
 ## clmapi.clmlib
 

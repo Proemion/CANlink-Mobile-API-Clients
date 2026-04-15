@@ -1,0 +1,2814 @@
+/* Copyright 2022-2023 Proemion GmbH
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+syntax = "proto2";
+
+/* This protocol definition corresponds to CLM10000 release 3.2.2 */
+package clmproto;
+
+/* Result codes.
+ *
+ * The `enum result_code` defines codes which can be returned by the
+ * application in a response message.
+ */
+enum result_code
+{
+    /* The message received by the application is not known, perhaps one of the
+     * parties is using a different protocol version, where the new message
+     * has not yet been defined. */
+    RC_ERR_UNKNOWN_MSG = 0;
+
+    /* No error, typically this will be the normal "ack" response when
+     * everything worked as expected. */
+    RC_OK = 1;
+
+    /* The constructed message is invalid. This could also indicate a protocol
+     * mismatch, for instance when various types/enum values were not
+     * understood by the application. */
+    RC_ERR_INVALID_MSG = 2;
+
+    /* The application encountered an out of memory condition. */
+    RC_ERR_NOMEM = 3;
+
+    /* Request could not be served due to an internal application error, at
+     * this point it might be worth it to review the logs as something
+     * unexpected might have happened. */
+    RC_ERR_INTERNAL = 4;
+
+    /* Request contained configuration that could not be applied. */
+    RC_ERR_CONFIG = 5;
+
+    /* Configuration option is not known, this could again indicate a protocol
+     * mismatch between the client and the application. */
+    RC_ERR_UNKNOWN_OPTION = 6;
+};
+
+/* The enum describes events which caused the device to boot. */
+enum wake_up_reason
+{
+    /* Reserved, do not use. */
+    WAKE_UP_REASON_RESERVED = 0;
+
+    /* System boot was triggered by CLAMP15. */
+    WAKE_UP_REASON_CLAMP15 = 1;
+
+    /* System boot was triggered by CLAMP30. */
+    WAKE_UP_REASON_CLAMP30 = 2;
+
+    /* System boot was triggered by the CAN1 interface. */
+    WAKE_UP_REASON_CAN1 = 3;
+
+    /* System boot was triggered by the CAN2 interface. */
+    WAKE_UP_REASON_CAN2 = 4;
+
+    /* System boot was triggered by the CAN3 interface. */
+    WAKE_UP_REASON_CAN3 = 5;
+
+    /* System boot was triggered by an accelerometer event. */
+    WAKE_UP_REASON_ACCELEROMETER = 6;
+
+    /* The real-time interval wakes the system up after a specified time has
+     * elapsed since shutdown. */
+    WAKE_UP_REASON_RTC_INTERVAL = 7;
+
+    /* The real-time clock alarm wakes the system up at a specific time of
+     * day - daily or on specific days. */
+    WAKE_UP_REASON_RTC_ALARM = 8;
+
+    /* The system performed reboot/SW reset after the firmware update. */
+    WAKE_UP_REASON_REBOOT = 9;
+};
+
+/* Connection state of a remote machine tunnel service. */
+enum remote_machine_tunnel_connection_state
+{
+    /* Reserved, do not use */
+    RMT_CONNECTION_STATE_RESERVED = 0;
+
+    /* Initial or unknown state */
+    RMT_CONNECTION_STATE_UNKNOWN = 1;
+
+    /* Connection in progress */
+    RMT_CONNECTION_STATE_CONNECTING = 2;
+    /* Successfully connected and operational */
+
+    RMT_CONNECTION_STATE_CONNECTED = 3;
+    /* Connection has been lost or terminated */
+
+    RMT_CONNECTION_STATE_DISCONNECTED = 4;
+
+    /* Currently attempting to reestablish connection */
+    RMT_CONNECTION_STATE_RECONNECTING = 5;
+}
+
+/* Error type of a remote machine tunnel service. */
+enum remote_machine_tunnel_error_type
+{
+    /* Reserved, do not use */
+    RMT_ERROR_TYPE_RESERVED = 0;
+
+    /* Error with unknown or undetermined cause */
+    RMT_ERROR_TYPE_UNKNOWN_ERROR = 1;
+
+    /* Failed to resolve the remote address */
+    RMT_ERROR_TYPE_RESOLUTION_ERROR = 2;
+
+    /* Failed to establish connection to the remote server */
+    RMT_ERROR_TYPE_CONNECTION_ERROR = 3;
+
+    /* Protocol-level error during communication */
+    RMT_ERROR_TYPE_PROTOCOL_ERROR = 4;
+
+    /* Authentication failed */
+    RMT_ERROR_TYPE_AUTH_ERROR = 5;
+
+    /* Internal system error */
+    RMT_ERROR_TYPE_INTERNAL_ERROR = 6;
+
+    /* Heartbeat timeout */
+    RMT_ERROR_TYPE_HEARTBEAT_TIMEOUT = 7;
+}
+
+/* State of the remote machine tunnel client. */
+enum remote_machine_tunnel_client_state
+{
+    /* Reserved, do not use */
+    RMT_CLIENT_STATE_RESERVED = 0;
+
+    /* Initial or unknown state */
+    RMT_CLIENT_STATE_UNKNOWN = 1;
+
+    /* The client service is disabled */
+    RMT_CLIENT_STATE_NOT_RUNNING = 2;
+
+    /* The client service is running */
+    RMT_CLIENT_STATE_RUNNING = 3;
+
+    /* Failed to start the client */
+    RMT_CLIENT_STATE_ERROR = 4;
+}
+
+
+/* Hardware configuration state */
+message hardware_configuration
+{
+    optional bool with_battery = 1;
+    optional bool with_wifi = 2;
+};
+
+/* This message is sent out by the device each time a new connection with a
+ * communication party is established. */
+message device_info_notification
+{
+    /* NextID: 8 */
+
+    /* Current firmware version. */
+    optional string firmware_version = 1;
+
+    /* Timestamp of the last firmware update in milliseconds from epoch. */
+    optional uint64 firmware_update_time_ms = 2;
+
+    /* String identifying the OEM firmware variant. */
+    optional string oem_variant = 3;
+
+    /* Hardware version string: `<hardware version> <product code>`. For
+     * example Hw 0.0 0100A666 */
+    optional string hardware_version = 4;
+
+    /* Information which event caused the device to boot */
+    optional wake_up_reason wake_up_reason = 5;
+
+    /* API compatibility indicator, see `CFG_OPTION_UINT16_API_COMPATIBILITY`
+     * for more details. */
+    optional uint32 api_compatibility = 6;
+
+    /* Information about the device's hardware configuration */
+    optional hardware_configuration hardware_configuration = 7;
+
+    /* Current configuration name. */
+    optional string config_name = 8;
+
+    /* Current configuration version. */
+    optional string config_version = 9;
+
+    /* Timestamp of the last configuration update in milliseconds from epoch. */
+    optional uint64 config_update_time_ms = 10;
+}
+
+/* Notification about a firmware update on the device.
+ *
+ * This message is broadcasted to all connected clients as well as to the
+ * Proemion Data Portal each time a firmware update has been either attempted
+ * or performed. */
+message device_firmware_update_notification
+{
+    /* Indicator if the update was successful or not. */
+    optional bool success = 1;
+
+    /* Human readable update result or error message. */
+    optional string update_message = 2;
+
+    /* Currently running firmware version, i.e. the firmware version that was
+     * performing the update. */
+    optional string firmware_version_before_update = 3;
+
+    /* Firmware version of the update. */
+    optional string target_firmware_version = 4;
+
+    /* Timestamp of the last firmware update in milliseconds from epoch. */
+    optional uint64 firmware_update_time_ms = 5;
+}
+
+
+/* Device configuration update notification.
+ *
+ * This message is broadcasted to all connected clients as well as to the
+ * Proemion Data Portal each time a configuration update has been either
+ * attempted or performed. */
+message device_config_update_notification
+{
+    /* Indicator if the update was successful. */
+    optional bool success = 1;
+
+    /* Human readable update result message/error message. */
+    optional string update_message = 2;
+
+
+    /* Timestamp of the last config update in milliseconds from epoch. */
+    optional uint64 config_update_time_ms = 4;
+
+    /* Configuration name defined by the user via the DataPlatform */
+    optional string config_name = 5;
+
+    /* Configuration version, it is defined from the CLM10000
+     * and is part of the configuration file */
+    optional string config_version = 6;
+}
+
+/* Remote machine tunnel error info */
+message remote_machine_tunnel_error
+{
+    /* Error type */
+    optional remote_machine_tunnel_error_type type = 1;
+
+    /* Error description */
+    optional string description = 2;
+
+    /* Unix timestamp when the error occurred */
+    optional uint64 timestamp = 3;
+}
+
+/* Remote machine tunnel service state */
+message state_remote_machine_tunnel_service
+{
+    /* The name of the service as configured */
+    optional string name = 1;
+
+    /* Local address that's being forwarded */
+    optional string local_address = 2;
+
+    /* Current connection state of the control channel */
+    optional remote_machine_tunnel_connection_state connection_state = 3;
+
+    /* Unix timestamp of the last successful heartbeat */
+    optional uint64 last_heartbeat = 4;
+
+    /* Details about the last connection error */
+    optional remote_machine_tunnel_error last_error = 5;
+
+    /* Total bytes received for this service */
+    optional uint64 bytes_in = 6;
+
+    /* Total bytes sent for this service */
+    optional uint64 bytes_out = 7;
+}
+
+ /* Remote machine tunnel state */
+ message state_remote_machine_tunnel
+ {
+    /* Remote machine tunnel services */
+    repeated state_remote_machine_tunnel_service services = 1;
+
+    /* State of the remote machine tunnel client */
+    optional remote_machine_tunnel_client_state client_state = 2;
+
+    /* Unique session identifier in uuid format */
+    optional string session_id = 3;
+
+    /* Total bytes received across all services */
+    optional uint64 bytes_in = 4;
+
+    /* Total bytes sent across all services */
+    optional uint64 bytes_out = 5;
+ }
+
+/* Configuration options
+ *
+ * Configuration options carry the actual values that can be applied to the
+ * device. The naming scheme always hints the data type as well as group
+ * membership, followed by the option name. Exception to the rule are options
+ * of `CFG_GROUP_OTHER`, there the group hint is omitted from the option name.
+ *
+ * Example of the naming scheme: `CFG_OPTION_[datatype]_[group]_[option name]`
+ *
+ * Below is the list of all known options at the time of writing, new firmware
+ * versions may introduce more groups and more options.
+ */
+enum cfg_option
+{
+    /* NextID: 153 */
+
+    /* Reserved, do not use. */
+    CFG_OPTION_RESERVED = 0;
+
+    /*   - Data type: _string_
+     *   - Default value: IMEI, retrieved from the modem
+     *   - Group membership: `CFG_GROUP_DP`
+     *
+     *   Communication unit ID by which the device identifies itself with the
+     *   server, typically the IMEI. */
+    CFG_OPTION_STR_DP_CU_ID = 1;
+
+    /*   - Data type: _string_
+     *   - Default value: _mqtt.proemion.com_
+     *   - Group membership: `CFG_GROUP_DP`
+     *
+     *   The server address, typically this should be left at the
+     *   default setting. */
+    CFG_OPTION_STR_DP_ADDRESS = 2;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _8883_
+     *   - Group membership: `CFG_GROUP_DP`
+     *
+     *   The server port, typically this should be left at the
+     *   default setting. */
+    CFG_OPTION_UINT16_DP_PORT = 3;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_DP`
+     *
+     *   Automatically upload files to the server which were received via
+     *   local HTTP POST. When disabled, files will be stored on the device as
+     *   long as dedicated flash space is available. */
+    CFG_OPTION_BOOL_DP_AUTO_UPLOAD_ENABLED = 4;
+
+    /*   - Data type: _string_
+     *   - Default value: _https<area>://transfers.proemion.com/fromMachine_
+     *   - Group membership: `CFG_GROUP_DP`
+     *
+     *   The server URL where the device should POST its files to when
+     *   uploading, typically this should be left at the default setting. */
+    CFG_OPTION_STR_DP_UPLOAD_URL = 5;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_ACCESS`
+     *
+     *   Generally allow or disallow local file uploads to the device. */
+    CFG_OPTION_BOOL_ACCESS_LOCAL_UPLOAD_ENABLED = 6;
+
+    /* This option is no longer supported. */
+    CFG_OPTION_BOOL_ACCESS_LOCAL_UPLOAD_PASSWORD_ENABLED = 7;
+
+    /* This option is no longer supported. */
+    CFG_OPTION_BOOL_ACCESS_LOCAL_UPLOAD_HTTP_ENABLED = 8;
+
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_MODEM`
+     *
+     *   This option allows to enable or disable the modem interface. Note,
+     *   that this option controls the modem interface as a whole, meaning
+     *   that it will disable the modem regardless of individual connection
+     *   profile settings. */
+    CFG_OPTION_BOOL_IF_MODEM_ENABLED = 17;
+
+    /*   - Data type: _string_
+     *   - Default value: _Mobile connection_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Modem connection profile name, must be globally unique regardless of
+     *   interface.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_CONNECTION_NAME = 18;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Connect this profile automatically when the resources for this
+     *   connection become available. When set to false the profile will be
+     *   "parked" in the configuration, but not actively used.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_MODEM_AUTOCONNECT = 19;
+
+    /*   - Data type: _int32_t_
+     *   - Default value: _0_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Priority for profiles that are configured to auto connect, this
+     *   setting spans over all profiles of all interfaces where the
+     *   autoconnect setting is set to true. A higher number means higher
+     *   priority.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT32_IF_MODEM_AUTOCONNECT_PRIO = 20;
+
+    /*   - Data type: _int32_t_
+     *   - Default value: _0_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Number of times to retry to connect the profile automatically before
+     *   giving up. When autoconnection fails after the given number of 
+     *   retries, the next highest priority profile will be used. A value of
+     *   zero means retry forever.
+     *
+     *   **Note:** when autoconnection fails due to the retries being exceeded,
+     *   NetworkManager will still try again after a certain timeout.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT32_IF_MODEM_AUTOCONNECT_RETRIES = 21;
+
+    /*   - Data type: _string_
+     *   - Default value: _mobile.iot.ifm_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Access point name for establishing data sessions with the mobile
+     *   network.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_APN = 22;
+
+    /*   - Data type: _string_
+     *   - Default value: none
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Password used to authenticate with the mobile network (if required),
+     *   not set by default.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_PASSWORD = 23;
+
+    /*   - Data type: _string_
+     *   - Default value: none
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   User name used to authenticate with the GSM network (if required), not
+     *   set by default.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_USERNAME = 24;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Allow only connections to the home network, disallow roaming.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_MODEM_HOME_ONLY = 25;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_SIM`
+     *
+     *   Enable or disable SIM card PIN code. */
+    CFG_OPTION_BOOL_SIM_PIN_ENABLED = 26;
+
+    /*   - Data type: _string_
+     *   - Default value: none
+     *   - Group membership: `CFG_GROUP_SIM`
+     *
+     *   PIN code needed to unlock the SIM card if the PIN is enabled. */
+    CFG_OPTION_STR_SIM_CURRENT_PIN = 27;
+
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   DNS Server address 1.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_IPV4_DNS1 = 28;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   DNS Server address 2.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_IPV4_DNS2 = 29;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   DNS Server address 3.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_MODEM_IPV4_DNS3 = 30;
+
+    /*   - Data type: _int64_t_
+     *   - Default value: _-1_
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Routing metric, lower values have higher priority. Set to -1 for
+     *   automatic assignment based on interface type. This option will allow
+     *   you to prioritize one interface over the other when accessing the
+     *   internet, depending on interface or connection availability.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT64_IF_MODEM_IPV4_ROUTE_METRIC = 31;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET`
+     *
+     *   This option allows to enable or disable the Ethernet interface.
+     *
+     *   **Note:** this option controls the whole device, meaning that it will
+     *   disable the Ethernet regardless of individual connection profile
+     *   settings. */
+    CFG_OPTION_BOOL_IF_ETHERNET_ENABLED = 32;
+
+    /*   - Data type: _string_
+     *   - Default value: _Wired connection_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Ethernet connection profile name, must be globally unique regardless
+     *   of interface.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_ETHERNET_CONNECTION_NAME = 33;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Connect this profile automatically when the resources for this
+     *   connection become available. When set to false the profile will be
+     *   "parked" in the configuration, but not actively used.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_ETHERNET_AUTOCONNECT = 34;
+
+    /*   - Data type: _int32_t_
+     *   - Default value: _0_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Priority for profiles that are configured to auto connect, this
+     *   setting spans over all profiles of all interfaces where the
+     *   autoconnect setting is set to true. A higher number means higher
+     *   priority.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT32_IF_ETHERNET_AUTOCONNECT_PRIO = 35;
+
+    /*   - Data type: _int32_t_
+     *   - Default value: _0_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Number of times to retry to connect the profile automatically before
+     *   giving up. When autoconnection fails after the given number of
+     *   retries, the next highest priority profile will be used. A value of
+     *   zero means retry forever.
+     *
+     *   **Note:** when autoconnection fails due to the retries being exceeded,
+     *   NetworkManager will still try again after a certain timeout.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT32_IF_ETHERNET_AUTOCONNECT_RETRIES = 36;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   DNS Server address 1.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_ETHERNET_IPV4_DNS1 = 37;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   DNS Server address 2.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_ETHERNET_IPV4_DNS2 = 38;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   DNS Server address 3.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_ETHERNET_IPV4_DNS3 = 39;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   IP address used for either static IP or DHCP server configurations.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+    CFG_OPTION_STR_IF_ETHERNET_IPV4_ADDRESS = 40;
+
+    /*   - Data type: _string_
+     *   - Default value: _link-local_
+     *   - Allowed values: _disabled_, _auto_, _manual_, _link-local_, _shared_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   IP configuration method, by default the interface is set to use
+     *   _link-local_, i.e. auto-ip configuration which makes sure that the
+     *   device does not disrupt an existing network when plugged in.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_ETHERNET_IPV4_METHOD = 41;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   First DHCP pool IP address when selecting _shared_ IPv4 method.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+     CFG_OPTION_STR_IF_ETHERNET_IPV4_DHCP_FIRST_ADDRESS = 141;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Last DHCP pool IP address when selecting _shared_ IPv4 method.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+     CFG_OPTION_STR_IF_ETHERNET_IPV4_DHCP_LAST_ADDRESS = 142;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Gateway IP address, usually only needs to be set when _manual_, i.e.
+     *   static-ip network configuration method was selected.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_ETHERNET_IPV4_GATEWAY = 42;
+
+    /*   - Data type: _int64_t_
+     *   - Default value: _-1_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Routing metric, lower values have higher priority. Set to -1 for
+     *   automatic assignment based on interface type. This option will allow
+     *   you to prioritize one interface over the other when accessing the
+     *   internet, depending on interface or connection availability.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT64_IF_ETHERNET_IPV4_ROUTE_METRIC = 43;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_WIFI`
+     *
+     *   This option allows to enable or disable the wireless interface.
+     *
+     *   **Note:** this option controls the whole device, meaning that it will
+     *   disable the wireless interface regardless of individual connection
+     *   profile settings. */
+    CFG_OPTION_BOOL_IF_WIFI_ENABLED = 44;
+
+    /*   - Data type: _string_
+     *   - Default value: "DE"
+     *   - Allowed values: "AT", "BE", "BG", "CA", "CH", "CY", "CZ", "DE",
+     *     "DK", "EE", "ES", "FI", "FR", "GB", "GR", "HR", "HU", "IE", "IT",
+     *     "JP", "LT", "LV", "LU", "MT", "NL", "NO", "PL", "PT", "RO", "SE",
+     *     "SI", "SK", "US"
+     *   - Group membership: `CFG_GROUP_IF_WIFI`
+     *
+     *   WiFi regulatory domain setting. */
+    CFG_OPTION_STR_IF_WIFI_REGULATORY_DOMAIN = 45;
+
+    /*   - Data type: _string_
+     *   - Default value: _Wireless connection_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Wireless connection profile name, must be globally unique regardless
+     *   of the interface.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_CONNECTION_NAME = 46;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Connect this profile automatically when the resources for this
+     *   connection become available. When set to false the profile will be
+     *   "parked" in the configuration, but not actively used.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_WIFI_AUTOCONNECT = 47;
+
+    /*   - Data type: _int32_t_
+     *   - Default value: _0_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Priority for profiles that are configured to auto connect, this
+     *   setting spans over all profiles of all interfaces where the
+     *   autoconnect setting is set to true. A higher number means higher
+     *   priority.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT32_IF_WIFI_AUTOCONNECT_PRIO = 48;
+
+    /*   - Data type: _int32_t_
+     *   - Default value: _0_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Number of times to retry to connect the profile automatically before
+     *   giving up. When autoconnection fails after the given number of
+     *   retries, the next highest priority profile will be used. A value of
+     *   zero means retry forever.
+     *
+     *   **Note:** when autoconnection fails due to the retries being exceeded,
+     *   NetworkManager will still try again after a certain timeout.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT32_IF_WIFI_AUTOCONNECT_RETRIES = 49;
+
+    /*   - Data type: _uint32_t_
+     *   - Default value: _0_, chosen automatically by NetworkManager
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Wireless channel to use for this connection, the value of zero means,
+     *   that the channel will be chosen automatically. Explicitly setting this
+     *   option will ensure that the device only joins a network on the
+     *   specified channel.
+     *
+     *   **Note:**  since WiFi channel numbers overlap between bands, this
+     *   option can only be set if `CFG_OPTION_STR_IF_WIFI_BAND` has been
+     *   configured as well.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_UINT32_IF_WIFI_CHANNEL = 50;
+
+    /*   - Data type: _string_
+     *   - Default value: _auto_
+     *   - Allowed values: _auto_, _A (5 GHz)_, _B/G (2.4 GHz)_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   This option configures the 802.11 frequency band of the network, i.e.
+     *   the device will not join the network if the band does not match, even
+     *   if all other options are compatible.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_BAND = 51;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   This option controls if the SSID of the WiFi network (if created by
+     *   the CLM10000) is hidden or visible.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_WIFI_HIDDEN_SSID = 52;
+
+    /*   - Data type: _bytes_
+     *   - Default value: _PRODUCT_NAME_XXXX_ where _XXXX_ are the last four
+     *     characters of the MAC address (see device label)
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   SSID of the WiFi network.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BYTES_IF_WIFI_SSID = 53;
+
+    /*   - Data type: _bytes_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   BSSID of the WiFi network.
+     *
+     *   **Note:** the SSID is usually a 1:1 string to bytes conversion where
+     *   the SSID string `test` would get converted to a byte representation
+     *   of `0x74 0x65 0x73 0x74` (i.e. ASCII codes of `test`). The BSSID
+     *   however needs some processing, the user usually enters something
+     *   like `001E42355F57` (or `00:1E:42:35:5F:57`), but NetworkManager does
+     *   not expect individual characters as ASCII codes, instead the user
+     *   input needs to be parsed as hex, so that the resulting
+     *   byte array passed via the API would become:
+     *   `0x00 0x1E 0x42 0x35 0x35 0x5F 0x57`
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BYTES_IF_WIFI_BSSID = 54;
+
+    /*   - Data type: _string_
+     *   - Default value: _hotspot_
+     *   - Allowed values: _hotspot_, _client_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Wireless network mode.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_MODE = 55;
+
+    /*   - Data type: _string_
+     *   - Default value: _WPA/PSK_
+     *   - Allowed values: _WPA/PSK_, _SAE_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Key management configuration for the WiFi connection.
+     *
+     *   **Note:** depending on the chosen value, other options like passphrase
+     *   and alike also need to be set.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_KEY_MANAGEMENT = 56;
+
+    /*   - Data type: _string_
+     *   - Default value: Ethernet MAC address (see device label)
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Pre-shared key for WPA.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_PSK = 57;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   EAP anonymous identity for WPA/EAP networks.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_EAP_ANONYMOUS_IDENTITY = 58;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   EAP domain.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_EAP_DOMAIN = 59;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   EAP CA certificate in PEM format.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_EAP_CA_CERT = 60;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   EAP user name.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_EAP_USERNAME = 61;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   EAP password.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_SECURITY_EAP_PASSWORD = 62;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   DNS Server address 1.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_IPV4_DNS1 = 63;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   DNS Server address 2.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_IPV4_DNS2 = 64;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   DNS Server address 3.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_IPV4_DNS3 = 65;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   IP address used for either static IP or DHCP server configurations.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+    CFG_OPTION_STR_IF_WIFI_IPV4_ADDRESS = 66;
+
+    /*   - Data type: _string_
+     *   - Default value: _shared_
+     *   - Allowed values: _disabled_, _auto_, _manual_, _link-local_, _shared_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   IP configuration method, by default the interface is set to act as
+     *   a DHCP server.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_IPV4_METHOD = 67;
+
+        /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   First DHCP pool IP address when selecting _shared_ IPv4 method.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+     CFG_OPTION_STR_IF_WIFI_IPV4_DHCP_FIRST_ADDRESS = 143;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Last DHCP pool IP address when selecting _shared_ IPv4 method.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+     CFG_OPTION_STR_IF_WIFI_IPV4_DHCP_LAST_ADDRESS = 144;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Gateway IP address.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_STR_IF_WIFI_IPV4_GATEWAY = 68;
+
+    /*   - Data type: _int64_t_
+     *   - Default value: _-1_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Routing metric, lower values have higher priority. Set to -1 for
+     *   automatic assignment based on interface type. This option will allow
+     *   you to prioritize one interface over the other when accessing the
+     *   internet, depending on interface or connection availability.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_INT64_IF_WIFI_IPV4_ROUTE_METRIC = 69;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   This option controls Global Navigation Satellite System data
+     *   acquisition. */
+    CFG_OPTION_BOOL_GNSS_ENABLED = 70;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   Enable or disable Glonass support.
+     *
+     *   **Note:** GPS is always enabled regardless of the configuration of
+     *   other services. */
+    CFG_OPTION_BOOL_GNSS_GLONASS_ENABLED = 71;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   Enable or disable BeiDou support.
+     *
+     *   **Note:** GPS is always enabled regardless of the configuration of
+     *   other services. */
+    CFG_OPTION_BOOL_GNSS_BEIDOU_ENABLED = 72;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   Enable or disable Galileo support.
+     *
+     *   **Note:** GPS is always enabled regardless of the configuration of
+     *   other services. */
+    CFG_OPTION_BOOL_GNSS_GALILEO_ENABLED = 73;
+
+    /*  GNSS multicast support has been removed in version 3.3.0. */
+    CFG_OPTION_BOOL_GNSS_MULTICAST_ENABLED = 74;
+
+    /*  GNSS multicast support has been removed in version 3.3.0. */
+    CFG_OPTION_STR_GNSS_MULTICAST_ADDRESS = 75;
+
+    /*  GNSS multicast support has been removed in version 3.3.0. */
+    CFG_OPTION_UINT16_GNSS_MULTICAST_PORT = 76;
+
+    /*  GNSS multicast support has been removed in version 3.3.0. */
+    CFG_OPTION_UINT16_GNSS_MULTICAST_RATE_LIMIT = 77;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   Enable collection and upload of GNSS data to the server. */
+    CFG_OPTION_BOOL_GNSS_UPLOAD_ENABLED = 126;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _0_ (seconds)
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   Collection period for GNSS data in seconds. */
+    CFG_OPTION_UINT16_GNSS_COLLECTION_RATE_LIMIT = 127;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _0_ (seconds)
+     *   - Group membership: `CFG_GROUP_GNSS`
+     *
+     *   Upload period of the collected GNSS data in seconds. */
+    CFG_OPTION_UINT16_GNSS_UPLOAD_RATE_LIMIT = 128;
+
+    /*   - Data type: _string_
+     *   - Default value: _UTC_
+     *   - Allowed values: _Europe/Amsterdam_, _Europe/Berlin_, ...
+     *   - Group membership: `CFG_GROUP_DATETIME`
+     *
+     *   Set timezone of the device.
+     *
+     *   **Note:** the list of allowed time zone values is quite long, so
+     *   it is not described here. Please read out this setting from the
+     *   device in order to retrieve the full allowed value list. */
+    CFG_OPTION_STR_DATETIME_TIMEZONE = 78;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_NTP`
+     *
+     *   Enable or disable the Network Time Protocol daemon. */
+    CFG_OPTION_BOOL_NTP_ENABLED = 79;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_NTP`
+     *
+     *   **Note:** this is a setting for an additional NTP server which can be
+     *   added by the user to the list of servers, the device always uses
+     *   `ntp.proemion.com` by default. */
+    CFG_OPTION_STR_NTP_SERVER = 80;
+
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _API compatibility version of the configuration_
+     *   - Group membership: `CFG_GROUP_OTHER`
+     *
+     *   Denotes what API version the configuration file is compatible with.
+     *   Refer to `CFG_OPTION_UiNT16_API_COMPATIBILITLY` for more details. */
+    CFG_OPTION_UINT16_CFG_VERSION = 81;
+
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable Sleep Mode handling. When the option is set, the device goes
+     *   into the power-saving/sleep mode if the Clamp15 is not asserted. */
+    CFG_OPTION_BOOL_PWR_SLEEP_MODE_ENABLED = 88;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _10_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Sleep Mode Delay determines how long the device remains active after
+     *   the Clamp15 becomes low. Once it expires, the device goes into power
+     *   saving mode if the Clamp15 stays low. The delay time is defined in
+     *   seconds. */
+    CFG_OPTION_UINT16_PWR_SLEEP_MODE_DELAY = 89;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable the accelerometer as a wake-up source. Acceleration threshold
+     *   must be configured with
+     *   `CFG_OPTION_DOUBLE_PWR_ACC_WAKE_UP_THRESHOLD`. */
+    CFG_OPTION_BOOL_PWR_ACC_WAKE_UP_ENABLED = 90;
+
+    /*   - Data type: _double_
+     *   - Default value: _0.2_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Acceleration force that wakes the device when the detected
+     *   acceleration exceed it. This setting is ignored if accelerometer is
+     *   not enabled as a wake-up source. The threshold is defined in
+     *   g-forces. */
+    CFG_OPTION_DOUBLE_PWR_ACC_WAKE_UP_THRESHOLD = 91;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable the system real-time clock as a wake-up source. After device
+     *   has entered the sleep mode, the real-time clock will wake-up the
+     *   device after the time defined in
+     *   `CFG_OPTION_UINT32_PWR_RTC_WAKE_UP_INTERVAL`. */
+    CFG_OPTION_BOOL_PWR_RTC_WAKE_UP_INTERVAL_ENABLED = 92;
+
+    /*   - Data type: _uint32_t_
+     *   - Default value: _86400_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   The real-time clock interval that periodically wakes up the device
+     *   when the defined time has expired. The RTC interval is defined in
+     *   seconds, default 24 hours. This setting is ignored if the real-time
+     *   clock is not enabled as a wake-up source. */
+    CFG_OPTION_UINT32_PWR_RTC_WAKE_UP_INTERVAL = 93;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable the transport mode in which the device wakes up only on the
+     *   raising edge event of the Clamp30 or Clamp15. All the other wake-up
+     *   sources are temporary disabled. This mode is valid for one boot
+     *   cycle. */
+    CFG_OPTION_BOOL_PWR_TRANSPORT_MODE_ENABLED = 94;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _600_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Timeout for publishing the wake-up reason to the Data Portal. If the
+     *   device is woken up but the Clamp15 is not provided, the device will
+     *   remain active until the wake-up reason is reported to the Data Portal
+     *   or until the timeout expires. */
+    CFG_OPTION_UINT16_PWR_WAKE_UP_REASON_TIMEOUT = 95;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _API backwards compatibility indicator_
+     *   - Group membership: `CFG_GROUP_OTHER`
+     *
+     *   This number will increase each time a breaking change is introduced.
+     *   A breaking change is defined as a modification to the protocol which
+     *   removes existing messages or removes existing message fields in a way,
+     *   that makes it incompatible to previous versions.
+     *
+     *   Such changes, should they occur, will be announced and the fields and
+     *   messages in question will be marked as deprecated.
+     *
+     *   The deprecated protocol parts will be supported for the duration of
+     *   one year prior to final removal. */
+    CFG_OPTION_UINT16_API_COMPATIBILITY = 96;
+
+    /*   - Data type: _uint32_t_
+     *   - Default value: _0_ (disabled)
+     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
+     *
+     *   Maximum transmission unit for the modem connection. Setting this option
+     *   will ensure, that only packets of the given size or smaller will be
+     *   transmitted. Larger packets will be broken up into multiple frames.
+     *
+     *   The value of `0` indicates, that this option is disabled.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_UINT32_IF_MODEM_MTU = 97;
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE`
+     *
+     *   This option allows to enable or disable the bridging of Ethernet and
+     *   WiFi. This makes the two interfaces act as one, allowing wired and
+     *   wireless access to the same network.
+     *
+     *   When bridging is enabled, all other individual Ethernet and WiFi
+     *   profiles become locked and disabled, because the corresponding
+     *   interfaces now below to the bridge.
+     *
+     *   Also, should the Ethernet or WiFi device be disabled when bridging
+     *   becomes enabled, then these interfaces will be reenabled automatically.
+     *   This needs to happen, because bridging requires both interfaces to
+     *   be present and active. */
+    CFG_OPTION_BOOL_IF_BRIDGE_ENABLED = 98;
+
+    /*   - Data type: _string_
+     *   - Default value: _Ethernet-WiFi bridge_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE`
+     *
+     *   Name of the bridged connection, this is a read only value which can
+     *   not be changed. */
+    CFG_OPTION_STR_IF_BRIDGE_CONNECTION_NAME = 99;
+
+    /*   - Data type: _uint32_t_
+     *   - Default value: _0_, chosen automatically by NetworkManager
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Wireless channel to use for this connection, the value of zero means,
+     *   that the channel will be chosen automatically. Explicitly setting this
+     *   option will ensure that the device only joins a network on the
+     *   specified channel.
+     *
+     *   **Note:**  since WiFi channel numbers overlap between bands, this
+     *   option can only be set if `CFG_OPTION_STR_IF_WIFI_BAND` has been
+     *   configured as well. */
+    CFG_OPTION_UINT32_IF_BRIDGE_WIFI_CHANNEL = 100;
+
+
+    /*   - Data type: _string_
+     *   - Default value: _auto_
+     *   - Allowed values: _auto_, _A (5 GHz)_, _B/G (2.4 GHz)_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   This option configures the 802.11 frequency band of the network, i.e.
+     *   the device will not join the network if the band does not match, even
+     *   if all other options are compatible. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_BAND = 101;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   This option controls if the SSID of the WiFi network (if created by
+     *   the CLM10000) is hidden or visible. */
+    CFG_OPTION_BOOL_IF_BRIDGE_WIFI_HIDDEN_SSID = 102;
+
+    /*   - Data type: _bytes_
+     *   - Default value: _PRODUCT_NAME_XXXX_ where _XXXX_ are the last four
+     *     characters of the MAC address (see device label)
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   SSID of the WiFi network. */
+    CFG_OPTION_BYTES_IF_BRIDGE_WIFI_SSID = 103;
+
+    /*   - Data type: _bytes_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   BSSID of the WiFi network.
+     *
+     *   **Note:** the SSID is usually a 1:1 string to bytes conversion where
+     *   the SSID string `test` would get converted to a byte representation
+     *   of `0x74 0x65 0x73 0x74` (i.e. ASCII codes of `test`). The BSSID
+     *   however needs some processing, the user usually enters something
+     *   like `001E42355F57` (or `00:1E:42:35:5F:57`), but NetworkManager does
+     *   not expect individual characters as ASCII codes, instead the user
+     *   input needs to be parsed as hex, so that the resulting
+     *   byte array passed via the API would become:
+     *   `0x00 0x1E 0x42 0x35 0x35 0x5F 0x57` */
+    CFG_OPTION_BYTES_IF_BRIDGE_WIFI_BSSID = 104;
+
+    /*   - Data type: _string_
+     *   - Default value: _WPA/PSK_
+     *   - Allowed values: _WPA/PSK_, _SAE_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Key management configuration for the WiFi connection.
+     *
+     *   **Note:** depending on the chosen value, other options like passphrase
+     *   and alike also need to be set. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_KEY_MANAGEMENT = 105;
+
+    /*   - Data type: _string_
+     *   - Default value: Ethernet MAC address (see device label)
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Pre-shared key for WPA. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_PSK = 106;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   EAP anonymous identity for WPA/EAP networks. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_EAP_ANONYMOUS_IDENTITY = 107;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   EAP domain. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_EAP_DOMAIN = 108;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   EAP CA certificate in PEM format. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_EAP_CA_CERT = 109;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   EAP user name. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_EAP_USERNAME = 110;
+
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   EAP password. */
+    CFG_OPTION_STR_IF_BRIDGE_WIFI_SECURITY_EAP_PASSWORD = 111;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   DNS Server address 1. */
+    CFG_OPTION_STR_IF_BRIDGE_IPV4_DNS1 = 112;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   DNS Server address 2. */
+    CFG_OPTION_STR_IF_BRIDGE_IPV4_DNS2 = 113;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   DNS Server address 3. */
+    CFG_OPTION_STR_IF_BRIDGE_IPV4_DNS3 = 114;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   IP address used for either static IP or DHCP server configurations. */
+    CFG_OPTION_STR_IF_BRIDGE_IPV4_ADDRESS = 115;
+
+    /*   - Data type: _string_
+     *   - Default value: _shared_
+     *   - Allowed values: _manual_, _shared_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   IP configuration method, by default the interface is set to act as
+     *   a DHCP server. */
+    CFG_OPTION_STR_IF_BRIDGE_IPV4_METHOD = 116;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   First DHCP pool IP address when selecting _shared_ IPv4 method.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+     CFG_OPTION_STR_IF_BRIDGE_IPV4_DHCP_FIRST_ADDRESS = 145;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Last DHCP pool IP address when selecting _shared_ IPv4 method.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls */
+     CFG_OPTION_STR_IF_BRIDGE_IPV4_DHCP_LAST_ADDRESS = 146;
+
+    /*   - Data type: _string_
+     *   - Default value: configured automatically
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Gateway IP address. */
+    CFG_OPTION_STR_IF_BRIDGE_IPV4_GATEWAY = 117;
+
+    /*   - Data type: _int64_t_
+     *   - Default value: _-1_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Routing metric, lower values have higher priority. Set to -1 for
+     *   automatic assignment based on interface type. This option will allow
+     *   you to prioritize one interface over the other when accessing the
+     *   internet, depending on interface or connection availability. */
+    CFG_OPTION_INT64_IF_BRIDGE_IPV4_ROUTE_METRIC = 118;
+
+    /*   - Data type: _string_
+     *   - Default value: _eSIM_
+     *   - Allowed values: _eSIM_, _Plug-In SIM_
+     *   - Group membership: `CFG_GROUP_SIM`
+     *
+     *   This option allows to sellect the SIM card used for cellular connection. */
+    CFG_OPTION_STR_SIM_CARD = 119;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_EPS_BEARER`
+     *
+     *   This option allows to enable a custom initial EPS Bearer during LTE attach procedure. */
+    CFG_OPTION_BOOL_EPS_BEARER_ENABLED = 120;
+
+    /*   - Data type: _str_
+     *   - Default value: not set
+     *   - Group membership: `CFG_GROUP_EPS_BEARER`
+     *
+     *   This option allows to define a custom APN of the initial EPS Bearer. */
+    CFG_OPTION_STR_EPS_BEARER_APN = 121;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_EPS_BEARER`
+     *
+     *   This option allows to force the requested ip-type to IPv4 only in the initial EPS Bearer. */
+    CFG_OPTION_BOOL_EPS_BEARER_IPV4_ONLY = 129;
+    
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_OPTION_BOOL_REMOTE_MACHINE_TUNNEL_ALLOWED`
+     *
+     *   Allow remote machine tunnel to be used from the device itself
+     */
+    CFG_OPTION_BOOL_REMOTE_MACHINE_TUNNEL_ALLOWED = 122;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_ACCESS`
+     *
+     *   Allow to GET data to the device via HTTP instead of HTTPS.
+     *   This is insecure!. Use at your own risk.
+     */
+    CFG_OPTION_BOOL_ACCESS_JSON_API_HTTP_ENABLED = 135;
+    /*   - Data type: _string_
+     *   - Default value: not set
+     *   - Group membersh: `CFG_GROUP_ACCESS`
+     *
+     *   Restricts access to the JSON API to only a specified list of addresses.
+     *   Valid only for HTTP GET requests.
+     */
+    CFG_OPTION_STR_ACCESS_JSON_API_HTTP_IPV4_WHITELIST = 136;
+
+
+    /*   - Data type: _bool_
+     *   - Default value: _true_
+     *   - Group membership: `CFG_GROUP_CODESYS_UPLOAD`
+     *
+     *   Enable or disable the cyclic upload of CODESYS logs. */
+    CFG_OPTION_BOOL_CODESYS_UPLOAD_CYCLIC_ENABLED = 139;
+
+    /*   - Data type: _uint16_t_
+     *   - Default value: _30_ (seconds)
+     *   - Group membership: `CFG_GROUP_CODESYS_UPLOAD`
+     *
+     *   Upload period of the collected CODESYS data logs. */
+    CFG_OPTION_UINT16_CODESYS_UPLOAD_RATE_LIMIT = 140;
+
+
+    /*   - Data type: _string_
+     *   - Default value: _auto_
+     *   - Allowed values: _auto_, _manual_
+     *   - Group membership: `CFG_GROUP_CELLULAR`
+     *
+     *   Select the cellular band selection mode for the mobile connection.
+     *   The manual mode configures LTE and UMTS bands selected in
+     *   `CFG_OPTION_STR_CELLULAR_BAND_UMTS` and `CFG_OPTION_STR_CELLULAR_BAND_LTE`.
+     *   The auto mode activates all supported bands. */
+    CFG_OPTION_STR_CELLULAR_BAND_SELECTION_MODE = 148;
+
+    /*   - Data type: _string array_
+     *   - Default value: _not_set_
+     *   - Allowed values: _not_set_, _WCDMA 2100_, _WCDMA PCS 1900_, _WCDMA 1700 US_,
+     *                     _WCDMA 850 US_, _WCDMA 800_, _WCDMA 900_, _WCDMA 850 JAPAN_,
+     *   - Group membership: `CFG_GROUP_CELLULAR`
+     *
+     *   Select UMTS bands for the mobile connection. This settings is applied only
+     *   if `CFG_OPTION_STR_CELLULAR_BAND_SELECTION_MODE` is `manual`. */
+    CFG_OPTION_STR_ARRAY_CELLULAR_UMTS_BAND = 149;
+
+    /*   - Data type: _string array_
+     *   - Default value: _not_set_
+     *   - Allowed values: _not_set_, _LTE band 1_, _LTE band 2_, _LTE band 3_, _LTE band 4_, _LTE band 5_,
+     *                     _LTE band 7_, _LTE band 8_, _LTE band 12_, _LTE band 13_, _LTE band 18_,
+     *                     _LTE band 19_, _LTE band 20_, _LTE band 25_, _LTE band 26_, _LTE band 28_,
+     *                     _LTE band 38_, _LTE band 39_, _LTE band 40_, _LTE band 41_,
+     *   - Group membership: `CFG_GROUP_CELLULAR`
+     *
+     *   Select LTE bands for the mobile connection. This settings is applied only
+     *   if `CFG_OPTION_STR_CELLULAR_BAND_SELECTION_MODE` is `manual`. */
+    CFG_OPTION_STR_ARRAY_CELLULAR_LTE_BAND = 150;
+
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_CODESYS`
+     *
+     *   Enable or disable CODESYS Runtime
+     */
+    CFG_OPTION_BOOL_CODESYS_RUNTIME_ENABLED = 151;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_CODESYS`
+     *
+     *   Enable or disable CODESYS Edge Gateway
+     */
+    CFG_OPTION_BOOL_CODESYS_EDGE_GATEWAY_ENABLED = 152;
+
+};
+
+/* Identifier which group the given option belongs to.
+ *
+ * Typically options of the same group should be set together, also helps
+ * UIs to highlight options that belong to the same group. */
+enum cfg_group
+{
+    /* NextID: 31 */
+
+    /* Reserved, do not use. */
+    CFG_GROUP_RESERVED = 0;
+
+    /* Root of the configuration tree. */
+    CFG_GROUP_ROOT = 1;
+
+    /* This group contains options related to the server settings. */
+    CFG_GROUP_DP = 2;
+
+    /* Device access related options. */
+    CFG_GROUP_ACCESS = 3;
+
+    /* Parent group containing sub groups of individual device interface
+     * configurations. */
+    CFG_GROUP_INTERFACES = 5;
+
+
+    /* General LTE modem interface settings, containing further groups for SIM
+     * card options and dynamic connection profile groups. */
+    CFG_GROUP_IF_MODEM = 9;
+
+    /* Child of `CFG_GROUP_IF_MODEM`, this is a dynamic group which holds
+     * connection profile settings for the modem. Multiple groups of this type
+     * can be dynamically created via the
+     * [`create_config_group_request`](#create_config_group_request) message. */
+    CFG_GROUP_IF_MODEM_PROFILE = 10;
+
+    /* General Ethernet interface settings, containing further dynamic
+     * connection profile groups. */
+    CFG_GROUP_IF_ETHERNET = 11;
+
+    /* Child of `CFG_GROUP_IF_ETHERNET`, this is a dynamic group which holds
+     * connection profile settings for the Ethernet interface. Multiple groups
+     * of this type can be dynamically created via the
+     * [`create_config_group_request`](#create_config_group_request) message. */
+    CFG_GROUP_IF_ETHERNET_PROFILE = 12;
+
+    /* General wireless interface settings, containing further dynamic
+     * connection profile groups. */
+    CFG_GROUP_IF_WIFI = 13;
+
+    /* Child of `CFG_GROUP_IF_WIFI`, this is a dynamic group which holds
+     * connection profile settings for the wireless interface. Multiple groups
+     * of this type can be dynamically created via the
+     * [`create_config_group_request`](#create_config_group_request) message. */
+    CFG_GROUP_IF_WIFI_PROFILE = 14;
+
+    /* This group contains Global Navigation Satellite System options. */
+    CFG_GROUP_GNSS = 15;
+
+    /* This group contains modem SIM card options. */
+    CFG_GROUP_SIM = 16;
+
+    /* This group contains options related to date and time configuration. */
+    CFG_GROUP_DATETIME = 17;
+
+    /* Child of `CFG_GROUP_DATETIME`, contains options specific to the
+     * Network Time Protocol. */
+    CFG_GROUP_NTP = 18;
+
+    /* This group contains options which do not fit anywhere else. */
+    CFG_GROUP_OTHER = 19;
+
+
+    /* This group contains options related to sleep mode configuration. */
+    CFG_GROUP_POWER_MANAGEMENT = 21;
+
+    /* Global Ethernet-WiFi bridge configuration settings. */
+    CFG_GROUP_IF_BRIDGE = 22;
+
+    /* Ethernet-WiFi bridge configuration settings. */
+    CFG_GROUP_IF_BRIDGE_PROFILE = 23;
+
+    /* Initial EPS Bearer settings. */
+    CFG_GROUP_EPS_BEARER = 24;
+
+    /* This group contains options related to the remote machine tunnel. */
+    CFG_GROUP_REMOTE_MACHINE_TUNNEL = 25;
+
+    /* Logging settings group */
+    CFG_GROUP_LOGGING = 26;
+
+    /* CODESYS upload settings group */
+    CFG_GROUP_CODESYS_UPLOAD = 27;
+
+
+    /* Cellular configuration for modem. */
+    CFG_GROUP_CELLULAR = 29;
+
+    /* CODESYS settings group. */
+    CFG_GROUP_CODESYS = 30;
+
+};
+
+/* This enum describes device firmware reset types which can be used in the
+ * [device_reset_request message](#device_reset_request). */
+enum device_reset_type
+{
+    /* Reserved, do not use. */
+    DEVICE_RESET_RESERVED = 0;
+
+    /* Reset all settings to factory defaults, also removes all user data
+     * including files that were uploaded to the device and have pending
+     * transfers to the DataPortal. */
+    DEVICE_RESET_FACTORY = 1;
+
+    /* Only reset the settings/configuration, but otherwise keep all user data
+     * intact. */
+    DEVICE_RESET_CONFIGURATION = 2;
+};
+
+/* Network identifier.
+ *
+ * Refers to a connection provided by a specific network interface. */
+enum network_type
+{
+    /* Reserved, do not use. */
+    NETWORK_TYPE_RESERVED = 0;
+
+    /* Ethernet. */
+    NETWORK_TYPE_ETHERNET = 1;
+
+    /* Wireless. */
+    NETWORK_TYPE_WIFI = 2;
+
+    /* Mobile. */
+    NETWORK_TYPE_MODEM = 3;
+
+    /* Ethernet-WiFi bridge. */
+    NETWORK_TYPE_BRIDGE = 4;
+}
+
+/* Identifier of the source of incoming data. */
+enum data_source
+{
+    /* Reserved, do not use. */
+    DATA_SOURCE_RESERVED = 0;
+
+    /* Action or data transfer was initiated via local interfaces, i.e.
+     * local webserver or websocket connection. */
+    DATA_SOURCE_LOCAL = 1;
+
+    /* Action or data transfer was initiated from the Proemion Data Portal. */
+    DATA_SOURCE_DATA_PORTAL = 2;
+}
+
+/* Information if a firmware update is happening and what state it is in. */
+enum firmware_update_state
+{
+    /* Reserved, do not use. */
+    FIRMWARE_UPDATE_STATE_RESERVED = 0;
+
+    /* Firmware is not being updated at the moment. */
+    FIRMWARE_UPDATE_STATE_NONE = 1;
+
+    /* Firmware update has started, firmware image is being transferred to the
+     * device. */
+    FIRMWARE_UPDATE_STATE_TRANSFERRING = 2;
+
+    /* Firmware is being flashed onto the device. */
+    FIRMWARE_UPDATE_STATE_FLASHING = 3;
+}
+
+
+
+
+/* State of a network interface.
+ *
+ * This enum describes which state a given network interface is currently in.
+ * Since NetworkManager is being used for network configuration, these
+ * states closely map to `enum NMDeviceState`, which combined with
+ * `enum NMDeviceStateReason` provide a detailed information on what is
+ * happening with the device and why.
+ */
+enum network_interface_state
+{
+    /* Reserved, do not use. */
+    NETWORK_IF_STATE_RESERVED = 0;
+
+    /* The state of the interface is not known at this time. */
+    NETWORK_IF_STATE_UNKNOWN = 1;
+
+    /* The network interface is disabled. */
+    NETWORK_IF_STATE_DISABLED = 2;
+
+    /* The network interface is disconnected, but otherwise idle and ready
+     * to be connected again. */
+    NETWORK_IF_STATE_DISCONNECTED = 3;
+
+    /* The interface is being activated, this includes being configured
+     * in order to establish a connection to the network, associating with a
+     * WiFi access point, requesting IPv$ addressing and routing information
+     * and alike. */
+    NETWORK_IF_STATE_ACTIVATING = 4;
+
+    /* The interface has established a connection to the requested network. */
+    NETWORK_IF_STATE_ACTIVATED = 5;
+
+    /* The interfacec failed to establish a connection to the requested
+     * network. */
+    NETWORK_IF_STATE_FAILED = 6;
+}
+
+/* This enum describes device shutdown types which can be used in the
+ * [power_state_request message](#power_state_request). */
+ enum power_command_type
+ {
+    /* Reserved, do not use. */
+    POWER_COMMAND_TYPE_RESERVED = 0;
+
+    /* The device remains off regardless of the sleep-mode and wake-up configuration. */
+    POWER_COMMAND_TYPE_SHUTDOWN = 1;
+
+    /* The device shuts down the system and restarts immediately. */
+    POWER_COMMAND_TYPE_REBOOT = 2;
+
+    /* The device shuts down when Clamp15 goes low and wakes up on configured events. */
+    POWER_COMMAND_TYPE_STANDBY = 3;
+ };
+
+
+/* Helper message defining the string array type for cfg_value. */
+message string_array
+{
+    repeated string values = 1;
+}
+
+/* Configuration value types
+ *
+ * Unlike C, protocol buffers do not offer fine grained data types like 8 and
+ * 16 bit integers, the smallest integer value is a 32 bit integer. To overcome
+ * this limitation we had to define extra fields for 8 and 16 bit signed and
+ * unsigned values, although they will still be transferred in a 32 bit
+ * protobuf data type. It is important to honor the limits of the given type,
+ * for instance, do not exceed `UCHAR_MAX` for a `u8` value field, not
+ * following this rule will trigger an error response from the application.
+ */
+message cfg_value
+{
+    oneof val
+    {
+        /* Corresponds to `uint8_t` in C, value range: `0` to `255`. */
+        uint32 u8 = 1;
+
+        /* Corresponds to `int8_t` in C, value range: `-128` to `127`. */
+        sint32 s8 = 2;
+
+        /* Corresponds to `uint16_t` in C, value range: `0` to `65535`. */
+        uint32 u16 = 3;
+
+        /* Corresponds to `int16_t` in C, value range: `−32768` to `32767`. */
+        sint32 s16 = 4;
+
+        /* Corresponds to `uint32_t` in C, value range: `0` to `4294967295`. */
+        uint32 u32 = 5;
+
+        /* Corresponds to `int32_t` in C, value range: `−2147483648` to
+         * `2147483647.` */
+        sint32 s32 = 6;
+
+        /* Corresponds to `uint64_t` in C, value range: `0` to
+         * `18446744073709551615`. */
+        uint64 u64 = 7;
+
+        /* Corresponds to `int64_t` in C, value range: `−9223372036854775808` to
+         * `9223372036854775807`. */
+        sint64 s64 = 8;
+
+        /* Corresponds to `bool` in C, value range: `true`, `false`. */
+        bool b = 9;
+
+        /* Corresponds to `char *` in C, `string`, zero terminated. */
+        string str = 10;
+
+        /* Corresponds to `float` in C, value range: `1.2E-38` to `3.4E+38`,
+         * 6 decimal places precision. */
+        float f = 11;
+
+        /* Corresponds to `double` in C, value range: `2.3E-308` to `1.7E+308`,
+         * 15 decimal places precision. */
+        double d = 12;
+
+        /* Corresponds to `uint8_t *` in C, array of data bytes with a given
+         * length. */
+        bytes bytes = 13;
+
+        /* Corresponds to `const char **` in C, array of strings. */
+        string_array string_array = 14;
+    }
+}
+
+/* Full description and value of one configuration setting when reading. */
+message cfg_response_element
+{
+    /* Configuration option that the data in the element refers to. */
+    required cfg_option option = 1;
+
+    /* Name of the dynamic group in case the option belongs to a dynamic group,
+     * otherwise unset. */
+    optional string group_name = 2;
+
+    /* Group identifier which the configuration setting belongs to. */
+    required cfg_group group_type = 3;
+
+    /* Value of the configuration setting, will stay unset in a validation
+     * response */
+    optional cfg_value value = 4;
+
+    /* Read only indication, if this field is provided and `true`, then the
+     * value of the corresponding option can not be changed. */
+    optional bool read_only = 5;
+
+    /* Human readable description of the option. */
+    optional string description = 6;
+
+    /* If this field is set, it lists values that are accepted by this option,
+     * values that are not part of the list will be rejected. */
+    repeated cfg_value allowed_values = 7;
+
+    /* Minimum allowed value, only set for numeric types and only if
+     * `allowed_values` is not set. */
+    optional cfg_value min_value = 8;
+
+    /* Maximum allowed value, only set for numeric types and only if
+     * `allowed_values` is not set. */
+    optional cfg_value max_value = 9;
+}
+
+/* Element for applying new configuration.
+ *
+ * Group name is required for settings that are part of a dynamic group
+ * (currently only network connection profiles) and must not be set for other
+ * options. */
+message cfg_apply_element
+{
+    /* Configuration option that needs to receive the new value. */
+    required cfg_option option = 1;
+
+    /* The value to be set.
+     *
+     *   **Note:** the value type must match the type supported by the selected
+     *   option, i.e. trying to set a `u16` value on an option accepting
+     *   `UINT32` will cause an error. */
+    required cfg_value value = 2;
+
+    /* Group name is required for options that are part of a dynamic group
+     * (currently only network connection profiles) and must either not be set
+     * or be NULL for options which do not belong to dynamic groups. */
+    optional string group_name = 3;
+}
+
+/* Configuration option selector.
+ *
+ * This message is defined to account for the dynamic group use case, it is used
+ * as part of the configuration request messages. The group name is required
+ * for settings that are part of a dynamic group (currently for network
+ * connection profiles).
+ */
+message cfg_option_selector
+{
+    /* Configuration option to select. */
+    required cfg_option option = 1;
+
+    /* In case of a dynamic group: name of the group that the option belongs
+     * to. Must not be set for non dynamic groups. */
+    optional string group_name = 2;
+}
+
+/* Configuration group selector.
+ *
+ * This message is defined to account for the dynamic group use case, it is used
+ * as part of the configuration request messages. The group name is required
+ * when referencing dynamic groups.
+ */
+message cfg_group_selector
+{
+    /* Group identifier. */
+    required cfg_group group_type = 1;
+
+    /* The group name if the option belongs to a network connection profile.
+     * Must not be present or must be NULL for non dynamic groups. */
+    optional string group_name = 2;
+}
+
+/* Retrieve one or more configuration settings.
+ *
+ * **Response**: `get_config_response`, `standard_response`.
+ *
+ * This request allows to retrieve one or more configuration settings. Various
+ * parameters provide a fine grained control over the settings selection.
+ *
+ * The `option` and `group` parameters can be combined in different ways, the
+ * logic for requesting groups works as follows:
+ *
+ * - when `option` is unset and `group` is unset, then all available options
+ *   are returned.
+ * - when one or more `group` elements is provided and `option` is unset, then
+ *   options found in the requested groups are returned.
+ * - when one or more `option` elements is provided and `group` is unset, then
+ *   only the requested options are returned.
+ * - when one or more `option` elements and one or more `group` elements is
+ *   provided, then options found in the requested groups and individually
+ *   requested options are returned.
+ *
+ * **Note**: requesting a group that is a parent to other subgroups will return all child options, including the ones found in sub groups.
+ */
+message get_config_request
+{
+    /*   Default value: unset/`false`.
+     *
+     *   Set to `true` in order to retrieve configuration defaults instead of
+     *   the actual settings. */
+    optional bool get_defaults = 1;
+
+    /*   Default value: unset/`false`.
+     *
+     *   Set to `true` in order to retrieve human readable configuration
+     *   option descriptions, this may be helpful when constructing user
+     *   interfaces. */
+    optional bool with_description = 2;
+
+    /*   Default value: unset.
+     *
+     *   Provide a list of options, values of which should be returned in the
+     *   response, make sure to set the group name when querying dynamic
+     *   groups. */
+    repeated cfg_option_selector option = 3;
+
+    /*   Default value: unset.
+     *
+     *   Provide a list of groups, values of options in these groups will be
+     *   returned in the response, make sure to set the group name when
+     *   querying dynamic groups. */
+    repeated cfg_group_selector group = 4;
+}
+
+/* Provide config settings in response to a get_config_request.
+ *
+ * This message is sent as a response to `get_config_request`, it will return
+ * configuration elements which match the filters provided in the request. */
+message get_config_response
+{
+    /* List of elements containing the option information which match the
+     * request filter. */
+    repeated cfg_response_element element = 1;
+}
+
+/* Apply one or more application settings.
+ *
+ * **Response**: `apply_config_response`, `standard_response`.
+ * 
+ * The Following message allows to apply new configuration settings, multiple
+ * settings can be applied at once.
+ *
+ * One important aspect is the handling of options which belong to the same
+ * group. These will be automatically handled as "transactions", i.e. all
+ * options from the group must succeed, if one fails, then all other options
+ * belonging to the same group won't get applied. This is done in order to
+ * prevent potential misconfigurations where one option may depend on some
+ * other option which also needs to be correct. */
+message apply_config_request
+{
+    /* List of elements describing options and values that need to be
+     * applied. An empty or unset list is not allowed, i.e. if there is nothing
+     * to apply, then do not issue the `apply_config_request`. */
+    repeated cfg_apply_element element = 1;
+}
+
+/* Individual error information on options that failed to apply.
+ *
+ * This element is part of the `apply_config_response` message, its presence
+ * for a given option indicates that this option failed to apply, the
+ * error message field will contain a human readable string. */
+message config_error
+{
+    /* Human readable error message, describing why the particular option
+     * failed to apply. */
+    optional string error_message = 1;
+
+    /* Option which failed to accept the new value. */
+    optional cfg_option option = 2;
+
+    /* Associated group name for options which belong to dynamic groups, will
+     * be unset/NULL for all other options. */
+    optional string group_name = 3;
+}
+
+/* Response to an apply config request.
+ *
+ * The response to the `apply_config_request` message provides detailed
+ * information about options that failed to apply or will confirm that
+ * everything worked correctly. */
+message apply_config_response
+{
+    /* Overall result code of the apply operation, if `RC_OK` then `message`
+     * and `error` will not be set. */
+    required result_code result_code = 1;
+
+    /* Human readable error message, providing information on why the apply
+     * request failed. */
+    optional string error_message = 2;
+
+    /* Individual per option error messages. */
+    repeated config_error error = 3;
+}
+
+/* Validate a set of option values, without applying them.
+ *
+ * **Response**: `validate_config_response`, `standard_response`.
+ *
+ * While this call may perform more actual validation later on, currently the
+ * focus is to retrieve option visibility flags depending on given settings.
+ * Basically, it's like using `apply_config_request`, but without actually
+ * applying anything and without deep validation which would normally happen
+ * in underlying libraries which process the values. The response will always
+ * contain a list of settings of the whole group along with the `read_only`
+ * flag for each setting, but without option values.
+ *
+ * The reason for this message is the need to detect `read_only` flags which
+ * may change due to changes of dependent option values. This is the only way
+ * how UIs could learn which other options become locked or unlocked for
+ * modification, if a dependent option changes its value, before actually
+ * applying anything. You can imagine it as a UI dialog where user selects
+ * different entries from a drop down list in option A, and each new selection
+ * causes option C and D to change their state between being grayed out and
+ * accepting user input.
+ *
+ * The message has the same structure as an `apply_config_request`. */
+message validate_config_request
+{
+    /* List of options to validate. */
+    repeated cfg_apply_element element = 1;
+}
+
+/* Response to the `validate_config_request` message.
+ *
+ * The response message provides detailed information about options that would
+ * fail to apply and it also provides `read_only` information on all other
+ * options within the related option group. This allows to track inter-option
+ * dependencies in regard to the `read_only` flags, thus enabling UIs to
+ * disallow or allow input on dependent options, based on the values passed in
+ * the validation request.
+ *
+ * A non error response here does not guarantee, that actual application of the
+ * same options won't fail. The reason is, that deep validation can not be
+ * performed by this call, as some options may get passed to underlying
+ * libraries and may fail only when actually reconfiguring the system. So, the
+ * main focus of the validation API is to provide information on the
+ * `read_only` flags of options in the sense "how would the `read_only` flag
+ * of options in this group be, if the given options were applied".
+ *
+ * The message is similar to the `get_config_response`, however option values
+ * are not provided here. */
+message validate_config_response
+{
+    /* Overall result code of the apply operation, if `RC_OK` then `message`
+     * and `error` will not be set. */
+    required result_code result_code = 1;
+
+    /* Human readable error message, providing information on why the apply
+     * request failed. */
+    optional string error_message = 2;
+
+    /* Individual per option error information. */
+    repeated config_error error = 3;
+
+    /* List of elements containing the option information. */
+    repeated cfg_response_element element = 4;
+}
+
+/* Message containing detailed group information.
+ *
+ * Note on the dynamic flag: currently the only dynamic groups which are
+ * supported are network profiles. When setting or reading options of a
+ * dynamic group the group name must always be provided, because multiple groups
+ * of the same cfg_group type may exist. */
+message cfg_group_info_element
+{
+    /* Group identifier. */
+    required cfg_group group_type = 1;
+
+    /* Parent group if available. */
+    optional cfg_group parent = 2;
+
+    /* Child groups if available. */
+    repeated cfg_group_info_element children = 3;
+
+    /* Human readable group name, set if `with_description` was `true` in the
+     * request. */
+    optional string description = 4;
+
+    /* Flag identifying if the group is a "dynamic" group. When this optional
+     * protobuf field is not set, then the flag can be interpreted as
+     * `false`. */
+    optional bool dynamic = 5;
+}
+
+/* Request information about configuration groups.
+ *
+ * **Response**: `get_config_group_info_response`, `standard_response`.
+ *
+ * This message will request information about configuration groups and their
+ * parent-child relationship. It is possible to query everything or only
+ * selected groups. */
+message get_config_group_info_request
+{
+    /* Provide a human readable description in the
+     * response (default: `false`). */
+    optional bool with_description = 1;
+
+    /* Recurse into child groups (default: `false`) */
+    optional bool recursive = 2;
+
+    /* Specific groups to query, if this parameter is not set, it equals to
+     * `CFG_GROUP_ROOT`. */
+    repeated cfg_group group_type = 3;
+}
+
+/* Response to the config group info request.
+ *
+ * The response contains a list of groups along with their descriptions
+ * (if requested) and parent relationship. */
+message get_config_group_info_response
+{
+    /* List of group info elements. */
+    repeated cfg_group_info_element element = 1;
+}
+
+/* Create a new configuration group of the given type.
+ *
+ * **Response**: `create_config_group_response`, `standard_response`.
+ *
+ * This request allows to create new configuration groups, only groups which
+ * have their group types flagged as "dynamic" can be created. Group name,
+ * which can be chosen by the user, acts as an additional identifier and needs
+ * to be globally unique.
+ *
+ * Currently only network configuration profile groups are dynamic and thus
+ * allow to create multiple network profiles.
+ *
+ * Newly created groups will be automatically populated with all known options
+ * belonging to the group type with all values set to their defaults.
+ *
+ * Applying custom settings to a new group is a two step process, i.e. first
+ * the group needs to be created using this call, as a second step new settings
+ * can be applied via the previously described `apply_config_request`
+ * message. */
+message create_config_group_request
+{
+    /* Group type, must be one of the "dynamic" group types, currently
+     * `CFG_GROUP_IF_XXX_PROFILE` groups are dynamic. */
+    required cfg_group group_type = 1;
+
+    /* Unique group name chosen by the user, will further be used in order to
+     * reference this group when querying option values that belong to it. */
+    required string group_name = 2;
+}
+
+/* Response to a create configuration group request.
+ *
+ * This message contains full information about the newly created group
+ * including all group options and their values. */
+message create_config_group_response
+{
+    /* Structure providing information about a configuration group options and
+     * their values, this is the same structure which is returned in a
+     * `get_config_response`. */
+    repeated cfg_response_element element = 1;
+}
+
+/* Remove a configuration group.
+ *
+ * **Response**: `standard_response`.
+ *
+ * Previously created dynamic groups can be removed when no longer needed.
+ * The only limitation is that the very last group of each type can not be
+ * deleted. Currently we support three dynamic groups, so the above means that
+ * at the very least one group of type `CFG_GROUP_IF_MODEM_PROFILE`, one group
+ * of type `CFG_GROUP_IF_ETHERNET_PROFILE` and one group of type
+ * `CFG_GROUP_IF_WIFI_PROFILE` needs to remain and can not be deleted. */
+message remove_config_group_request
+{
+    /* Name of the dynamic group which needs to be removed. Note, that there is
+     * no need to provide the group type in this message, because group names
+     * are globally unique. */
+    required string group_name = 1;
+}
+
+/* This message describes the CLM10000 configuration file format.
+ *
+ * It works both ways, i.e. for exporting and for importing,
+ * i.e. we will export our configuration as this serialized message when
+ * requested or we will load it from a file which we would get either
+ * locally or from the Data Portal.
+ *
+ * The processing of connection profiles works as follows:
+ *  - if the new configuration does not contain any create_config_group
+ *    messages, then old statements do not get overwritten, they remain
+ *    as they were.
+ *  - if the new configuration does contain create_config_group messages,
+ *    then all existing groups of the given type are removed and replaced by
+ *    the new ones provided in this config.
+ *
+ * The background behind the above is, that a network interface must always
+ * have at least one configured connection, so removing all of them, without
+ * providing a replacement is not allowed.
+ *
+ * If "factory_reset" is true, then all supplied elements are ignored and the
+ * whole configuration is reset to factory default values.
+ *
+ * **Note:** the configuration files are meant to be created only by the
+ * application itself via the export mechanism. This message definition was
+ * made available in order to allow to inspect contents of previously exported
+ * configuration files. */
+message config_file
+{
+    /* Dynamic groups that need to be created in the new configuration. */
+    repeated create_config_group_request create_config_group = 1;
+
+    /* New configuration settings. */
+    repeated cfg_apply_element element = 2;
+
+    /* Reset to factory defaults instruction. */
+    optional bool factory_reset = 3;
+
+    /* Configuration API version, on import it has to match the API
+     * compatibility indicator of the application, see 
+     * `CFG_OPTION_UINT16_API_COMPATIBILITY` for more details.
+     *
+     * Depending on the API version which was used to create the configuration
+     * file, import may be rejected. */
+    optional uint32 schema_version = 4;
+
+    /* Configuration version. */
+    optional string config_version = 5;
+}
+
+/* Export device configuration to a file that can later be reimported.
+ *
+ * **Response**: `config_export_response`, `standard_response`.
+ *
+ * If all fields are left out, then all writable config options will be
+ * exported.
+ *
+ * If the `factory_reset` parameter is set to `true`, then the exported file
+ * contains only the reset to factory defaults instruction; option and group
+ * fields must not be set and will be ignored. */
+message config_export_request
+{
+    /* Export individual options. */
+    repeated cfg_option_selector option = 1;
+
+    /* Export whole groups. */
+    repeated cfg_group_selector group = 2;
+
+    /* Request factory reset, if enabled, option and group must not be set! */
+    optional bool factory_reset = 3;
+}
+
+/* Response to a configuratoin export request.
+ *
+ * The response contains binary configuration data that can be saved to a file
+ * and reapplied to any compatible CLM10000 device later via the configuration
+ * upload feature. */
+message config_export_response
+{
+    /* Binary data which should be saved to a file and which can be used later
+     * to apply the exported configuration to the device. */
+    optional bytes file_data = 1;
+}
+
+/* Device configuration reset.
+ *
+ * **Response**: `standard_response`.
+ *
+ * Reset device configuration to factory defaults. Use with care, depending on
+ * your network configuration the device might become unavailable after it has
+ * been reset.
+ *
+ * Depending on the reset type, this request causes the application to restart,
+ * or it may cause the device to reboot, so it is expected that you will lose
+ * connection right after receiving a response to this request. */
+message device_reset_request
+{
+    /* Type of reset to perform, see the enum documentation for more details. */
+    optional device_reset_type reset_type = 1;
+}
+
+/* Change access password to the devices UI and Protomolecule API.
+ *
+ * **Response**: `standard_response`.
+ *
+ * Change the password for the web server of the device, this affects access to
+ * the web UI as well as access to the websocket for this proto API.
+ *
+ * The current administrator password is always required, the new password will
+ * only be set if the current one was supplied correctly.
+ *
+ * **Note:** if the "upload" user has been previously removed,
+ * `set_password_request` with a user name of "upload" will create the user
+ * again.
+ *
+ * Currently only two users are supported: "admin" has access to everything
+ * while "upload" can only POST files for further transfer to the Proemion Data
+ * Portal. This allows to keep the web UI and thus all configuration options
+ * locked for users or devices which only need to transfer files, but are
+ * otherwise not allowed to change the configuration of the CLM10000. */
+message set_password_request
+{
+    /* Password will be changed for the given user name, currently either
+     * "admin" or "upload". */
+    optional string username = 1;
+
+    /* Current administrator password. */
+    optional string admin_password = 2;
+
+    /* New password for the given user. */
+    optional string new_password = 3;
+}
+
+/* Remove a user.
+ *
+ * **Response**: `standard_response`.
+ *
+ * Currently only the "upload" user can be removed. */
+message remove_user_request
+{
+    /* Name of the user which should be removed, currently only "upload" is
+     * a valid value. */
+    optional string username = 1;
+}
+
+/* Retrieve list of currently available user accounts.
+ *
+ * **Response**: `get_users_response`.
+ *
+ * For now there are only two possible accounts and only one of them can be
+ * deleted. The `admin` account is always present, the `upload` account is
+ * optional and can be removed or created on demand.
+ *
+ * The message is a command in itself and does not contain any additional
+ * paylod. */
+message get_users_request
+{
+}
+
+/* Response, containing a list of currently available user accounts. */
+message get_users_response
+{
+    /* Currently the only user that can be removed or added is the "upload"
+     * user, the "admin" user will always be there. */
+    repeated string username = 1;
+}
+
+/* Abort an ongoing firmware update.
+ *
+ * **Response**: `standard_response`.
+ *
+ * This message can be used to abort a longer running transfer of the
+ * firmware update image. Once the image was completely downloaded and saved
+ * on the device, the update can no longer be aborted and flashing will start.
+ *
+ * Use this message to clear the update state of a device which has been
+ * permanently moved out of WAN reach and thus will never be able to finish
+ * the download of the image.
+ *
+ * This message is a command in itself and has no additional parameters. */
+message firmware_update_abort_request
+{
+}
+
+/* Dummy keep-alive message.
+ *
+ * Some frameworks need this to keep their websocket connection open.
+ * This message is accepted by the application without an error, but it does
+ * not produce a response, basically it is ignored, since its purpose is to
+ * allow the caller to do some periodic communication in order to keep the
+ * websocket connection alive, otherwise some client side frameworks and
+ * implementations may close the websocket automatically in case of longer
+ * inactivity */
+message keep_alive
+{
+}
+
+/* Set system date and time.
+ *
+ * **Response**: `standard_response`. */
+message set_datetime_request
+{
+    /* New time as a unix timestamp in seconds from epoch in UTC. */
+    optional sint64 utc_seconds_from_epoch = 1;
+}
+
+/* Request the current date and time of the device.
+ *
+ * **Response**: `get_datetime_response`.
+ *
+ * The message is a command in itself and has no additional parameters. */
+message get_datetime_request
+{
+}
+
+/* Response to a get date and time request.
+ *
+ * This message contains the current date and time of the device. */
+message get_datetime_response
+{
+    /* Unix timestamp in seconds from epoch in UTC, representing the current
+     * time of the device. */
+    optional sint64 utc_seconds_from_epoch = 1;
+}
+
+/* Retrieve volatile states of the device.
+ *
+ * This message retrieves the state as seen on the device at the time of
+ * querying. The state may change at any time, so the retrieved data should
+ * be seen as a volatile snapshot.
+ *
+ * The optional parameters allow to choose which states should be present
+ * in the response. When no parameters are given, all states will be
+ * returned. */
+message get_state_request
+{
+    /* State of the network interfaces, ip addresses, active profile, etc. */
+    optional bool state_network = 1;
+
+    /* Information if we are connected to the Proemion Data Portal. */
+    optional bool state_dataportal = 2;
+
+    /* Operating system related information. */
+    optional bool state_system = 3;
+
+    /* Information if a firmware update is ongoing and what state it is in. */
+    optional bool state_firmware_update = 4;
+
+
+
+   /* Remote machine tunnel state information */
+   optional bool state_remote_machine_tunnel = 7;
+}
+
+/* Network connection information. */
+message connection
+{
+    /* Network configuration profile which is currently active. */
+    optional string active_profile = 1;
+
+    /* IP address of the interface. */
+    repeated string ip = 2;
+
+    /* IP address of the gateway. */
+    optional string gateway = 3;
+
+    /* DNS servers that are being used. */
+    repeated string dns = 4;
+}
+
+/* This message provides information on one state change event. */
+message network_interface_state_event
+{
+    /* State of the network interface. */
+    optional network_interface_state state = 1;
+
+    /* Human readable message containing more information about the state
+     * change. */
+    optional string description = 2;
+
+    /* Timestamp of the state change in milliseconds from epoch. */
+    optional uint64 timestamp_ms = 3;
+}
+
+/* Network interface (device) information. */
+message network_interface
+{
+    /* Ethernet carrier detection, i.e. link up (true) or link down (false) */
+    optional bool ethernet_carrier = 1;
+
+    /* Mobile signal quality in percent (0%-100%) */
+    optional uint32 modem_signal_quality = 2;
+
+    /* Current state of the network interface. */
+    optional network_interface_state_event current_state = 3;
+
+    /* Last encountered error state, in case connection activation failed. */
+    optional network_interface_state_event last_error_state = 4;
+}
+
+/* Overall network state for the given connection type. */
+message state_network
+{
+    /* Type of the network interface, i.e. Ethernet, WiFi, modem. */
+    optional network_type type = 1;
+
+    /* Indication if the interface is active. */
+    optional bool active = 2;
+
+    /* Network configuration information. */
+    optional connection connection = 3;
+
+    /* Network interface specific information. */
+    optional network_interface interface = 4;
+
+    /* Indicator if the interface is providing the WAN connection. */
+    optional bool wan = 5;
+}
+
+/* Information about connectivity to the Data Portal. */
+message state_dataportal
+{
+    /* Flag indicating if the device has established a connection to the Data
+     * Portal. */
+    optional bool connected = 1;
+}
+
+/* Operating system related states. */
+message state_system
+{
+    /* Amount of seconds since the system booted. */
+    optional int64 uptime = 1;
+}
+
+/* Information if a firmware update is ongoing and what state it is in. */
+message state_firmware_update
+{
+    /* General state of the firmware update. */
+    optional firmware_update_state state = 1;
+
+    /* Information if the update was initiated locally or via the Data Portal.*/
+    optional data_source source = 2;
+
+    /* In case the firmware is being transferred to the device, this field
+     * will provide progress information of the transfer in percent. */
+    optional uint32 transfer_progress_percent = 3;
+}
+
+
+
+/* Response message to a state request.
+ *
+ * The response will only contain fields that have been set in the
+ * request.
+ *
+ * **Note:** the returned information is volatile and represents the current
+ * state of the system, it may change at any time. */
+message get_state_response
+{
+    /* Current network information for each interface. */
+    repeated state_network network = 1;
+
+    /* Data Portal related state, currently only connectivity information. */
+    optional state_dataportal dataportal = 2;
+
+
+    /* System information */
+    optional state_system system = 4;
+
+    /* Firmware update related information. */
+    optional state_firmware_update firmware_update = 5;
+
+
+   /* Remote machine tunnel state information */
+   optional state_remote_machine_tunnel remote_machine_tunnel = 7;
+}
+
+/* This notification will be sent out each time a state of a network interface
+ * changes. */
+message network_interface_state_notification
+{
+    /* Type of the network interface, i.e. Ethernet, WiFi, modem. */
+    optional network_type type = 1;
+
+    /* Information about the state change. */
+    optional network_interface_state_event state = 2;
+
+    /* Indicator if the interface is providing the WAN connection. */
+    optional bool wan = 3;
+}
+
+/* Control the power state of the device.
+ *
+ * **Response**: `standard_response`.
+ *
+ * Depending on the power command type, the device shuts down, then remains off,
+ * wakes up on configured events or restars immediately.
+ */
+message power_state_request
+{
+    optional power_command_type power_command_type = 1;
+}
+
+/* Generic response message.
+ *
+ * This is a generic message which is either used for requests which do not
+ * expect a response containing a payload or as an error response. Clients
+ * should always be prepared to receive a standard response to any request,
+ * this is how generic errors are communicated. So, as a rule of thumb, when
+ * sending a request you need to be prepared to receive the response which is
+ * specific to the request or the `standard_response`.
+ */
+message standard_response
+{
+    /* Code, indicating success or failure of the operation. */
+    required result_code result_code = 1;
+
+    /* Human readable text message containing the error description. */
+    optional string description = 2;
+}
+
+/** Main protocol message.
+ *
+ * All available messages must be encoded within this message, this is the
+ * basis of the protocol. New messages must be added as submessages to this
+ * message.
+ */
+message msg
+{
+    /* Message identifier for request-response tracking: can be any number
+     * chosen by the client, the same number will be returned in the response
+     * message. Since the protocol is asynchronous and request-response pairs
+     * are not guaranteed to appear in sequence, the caller can use this
+     * mechanism to identify which request a received response belongs to. */
+    optional uint32 message_id = 1;
+
+    oneof submsg
+    {
+        /* NextID: 39 */
+
+        /* Standard response submessage. */
+        standard_response standard_response = 2;
+
+        /* Retrieve device configuration. */
+        get_config_request get_config_request = 3;
+        /* Response to the configuration settings request. */
+        get_config_response get_config_response = 4;
+
+        /* Apply configuration settings. */
+        apply_config_request apply_config_request = 5;
+        /* Response to an apply configuration settings message. */
+        apply_config_response apply_config_response = 6;
+
+        /* Request group descriptions. */
+        get_config_group_info_request get_config_group_info_request = 7;
+        /* Response to a group descriptions request. */
+        get_config_group_info_response get_config_group_info_response = 8;
+
+        /* Request to create a configuration group. */
+        create_config_group_request create_config_group_request = 9;
+        /* Response to the request for creating configuration groups. */
+        create_config_group_response create_config_group_response = 10;
+
+        /* Request to remove a configuration group. */
+        remove_config_group_request remove_config_group_request = 11;
+
+        /* Request an export of the current device configuration. */
+        config_export_request config_export_request = 12;
+        /* Response to the configuration export request, containing binary
+        * configuration file data. */
+        config_export_response config_export_response = 13;
+
+        /* This message is sent out by the device each time a configuration
+         * update has been either attempted or performed. */
+        device_config_update_notification device_config_update_notification = 16;
+        /* Request a device reset, response is a standard_response message. */
+        device_reset_request device_reset_request = 17;
+
+        /* This message is sent out by the device each time a new connection has
+         * been established. You will receive it unsolicited right after
+         * connecting to the websocket. */
+        device_info_notification device_info_notification = 20;
+
+        /* This message is sent out by the device each time the device firmware
+         * has been updated or when an attempted update has failed. */
+        device_firmware_update_notification device_firmware_update_notification = 21;
+
+        /* Abort an ongoing firmware update. */
+        firmware_update_abort_request firmware_update_abort_request = 23;
+
+        /* Request to set password, returns a standard response. */
+        set_password_request set_password_request = 24;
+
+        /* Request to remove a user, returns a standard response. */
+        remove_user_request remove_user_request = 25;
+
+        /* Keep alive message, no response. */
+        keep_alive keep_alive = 26;
+
+        /* Set date and time request, returns a standard response. */
+        set_datetime_request set_datetime_request = 27;
+        /* Request device time, returns a get_datetime_response. */
+        get_datetime_request get_datetime_request = 28;
+        /* Response to a get_datetime_request. */
+        get_datetime_response get_datetime_response = 29;
+
+        /* Validate configuration settings without applying them. */
+        validate_config_request validate_config_request = 30;
+        /* Response to the validate_config_request message. */
+        validate_config_response validate_config_response = 31;
+
+        /* Get list of currently available user accounts. */
+        get_users_request get_users_request = 32;
+        /* Response to the get_users_request message. */
+        get_users_response get_users_response = 33;
+
+        /* Get various "live" states of the device. */
+        get_state_request get_state_request = 34;
+        /* Response to the get_state_request message. */
+        get_state_response get_state_response = 35;
+
+        /* Notification about a state change of a network interface. */
+        network_interface_state_notification network_interface_state_notification = 36;
+
+        /* Control the power state of the device. */
+        power_state_request set_power_state_request = 37;
+
+        /* Remote machine tunnel state information */
+        state_remote_machine_tunnel remote_machine_tunnel_notification = 38;
+    }
+}
