@@ -17,5 +17,3 @@ def build(setup_kwargs):
     if ret != 0:
         raise RuntimeError(f"protoc exited with code {ret}")
 
-if __name__ == "__main__":
-    build()
