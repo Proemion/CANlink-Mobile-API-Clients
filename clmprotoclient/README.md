@@ -1,6 +1,6 @@
 # clmprotoclient - Protomolecule Python Module
 
-The module simplifies interaction with the CLM10k via the protocol buffers
+The module simplifies interaction with the CANlink mobile via the protocol buffers
 based websocket API. It provides convenience methods which will create the
 actual proto messages and it also wraps around websockets in order to take
 care of sending and receiving the messages. It also contains the Python
@@ -10,13 +10,30 @@ want to implement the whole handling without using the provided module.
 The package also contains a reference application `clmshell` which uses the
 module and which allows to configure the device from a command line prompt.
 
-## Installation
+--------
+# Installation
 
+The latest built version can be installed from PyPI.
 Install from PyPI using `pip`:
 
 ```
 pip install clmprotoclient
 ```
+
+# Building
+We use [poetry](https://python-poetry.org) as build system. 
+
+### Building custom versions
+In case you need a custom version, e.g. because you might have a different proto API version running on your 
+device you can replace the `clmapi.proto` with your custom version and then run a new build with poetry build.
+
+
+# Contributing
+We encourage you to contribute. In case you can not find an pull request reviewer please do not hesitate to reach 
+out to Proemion support.
+------------------
+
+# Usage
 
 ## clmprotoclient.clmlib
 
