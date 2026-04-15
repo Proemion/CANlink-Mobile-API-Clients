@@ -1,5 +1,5 @@
 [project]
-name = "clm-proto-client"
+name = "clmprotoclient"
 version = "3.2.2"
 description = "Client to communicate with the CANlink Mobile 10000 protobuf API."
 authors = [

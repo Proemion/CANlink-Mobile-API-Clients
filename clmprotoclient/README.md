@@ -15,7 +15,7 @@ module and which allows to configure the device from a command line prompt.
 Install from PyPI using `pip`:
 
 ```
-pip install clm-proto-client
+pip install clmprotoclient
 ```
 
 ## clmapi.clmlib
