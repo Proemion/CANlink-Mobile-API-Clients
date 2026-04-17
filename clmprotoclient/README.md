@@ -240,7 +240,7 @@ Parameters:
   option type, while the second member is optional and is the associated group
   name which is required for options which belong to dynamic groups.
 
-* **`cb_response``: _`allable(response)`_
+* **`cb_response``: _`callable(response)`_
 
   Callback which will provide the response to this request.
 
