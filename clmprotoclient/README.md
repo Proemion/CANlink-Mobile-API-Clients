@@ -38,7 +38,7 @@ convenience wrapper around proto generation and websocket communication.
 
 The `clm10k` class represents a connection instance to the CLM10k protobuf API.
 
-The `clm10k class provides easy to use methods to generate requests to the
+The `clm10k` class provides easy to use methods to generate requests to the
 device via the websocket, using the protocol buffers based API.
 
 The responses from the unit are forwarded as is in proto messages, these
