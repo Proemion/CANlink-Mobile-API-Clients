@@ -279,7 +279,7 @@ Parameters:
     create_config_group(group, name, cb_response = None)
 ```
 
-This function creates a configuration group for the requested group  type, this
+This function creates a configuration group for the requested group type, this
 is how network profiles can be created. A unique name must be provided, names
 span across all dynamic groups regardless of the group type.
 
