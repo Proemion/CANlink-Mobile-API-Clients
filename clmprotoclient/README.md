@@ -161,7 +161,7 @@ The logic for requesting groups works as follows:
     options
 
 Note: requesting a group that is a parent to other subgroups will return all
-child options, including the ones found in sub groups.
+child options, including the ones found in subgroups.
 
 Parameters:
 
