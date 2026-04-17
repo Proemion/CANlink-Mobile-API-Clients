@@ -25,7 +25,7 @@ We use [poetry](https://python-poetry.org) as build system.
 
 
 # Contributing
-We encourage you to contribute. In case you can not find an pull request reviewer please do not hesitate to reach 
+We encourage you to contribute. In case you can not find a pull request reviewer please do not hesitate to reach 
 out to Proemion support.
 ------------------
 
