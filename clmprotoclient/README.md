@@ -45,7 +45,8 @@ The responses from the unit are forwarded as is in proto messages, these
 messages already present the data in a well structured way, so it does not make
 much sense to repack it.
 
-Make sure to also include the `clmprotoclient.clmapi_pb2` module in your code.
+This client requires the  `clmprotowrapper` as wrapper around the protocol buffers API 
+of the device which will be automatically installed due to defined dependencies.
 
 ### Instantiation
 
