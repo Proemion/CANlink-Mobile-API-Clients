@@ -1,7 +1,7 @@
 [project]
 name = "clmprotoclient"
 version = "1.0.0"
-description = "Client to communicate with the CANlink Mobile 10000 protobuf API."
+description = "Client to communicate with the CANlink mobile 10000 protobuf API."
 authors = [
     {name = "Proemion GmbH", email = "info@proemion.com"}
 ]
