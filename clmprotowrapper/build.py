@@ -1,5 +1,5 @@
 '''
-This build script uses the clmapi.proto to generate the clmapi_pb2.py module from the which is the wrapper
+This build script uses the clmapi.proto to generate the clmapi_pb2.py module, which serves as a wrapper
 for the protobuf API. It also runs on poetry build.
 '''
 
