@@ -1,0 +1,44 @@
+[project]
+name = "clmprotoclient"
+version = "1.0.0"
+description = "Client to communicate with the CANlink mobile 10000 protobuf API."
+authors = [
+    {name = "Proemion GmbH", email = "info@proemion.com"}
+]
+license = "Apache-2.0"
+requires-python = ">=3.12"
+readme = "README.md"
+keywords = ["CANlink", "CLM10k", "protobuf", "websocket", "CAN"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "clmprotowrapper (>=3.2.2)",
+    "websocket-client (>=1.2.3)",
+    "prompt-toolkit (>=3.0.24)",
+    "python-dateutil (>=2.8.1)",
+    "requests (>=2.28.1)",
+    "pyparsing (>=2.4.7)",
+    "tabulate (>=0.8.9)",
+]
+
+[project.scripts]
+clmshell = "clmprotoclient.clmshell:main"
+
+[project.urls]
+Repository = "https://github.com/Proemion/CANlink-Mobile-API-Clients"
+Issues = "https://github.com/Proemion/CANlink-Mobile-API-Clients/issues"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+packages = [{include = "clmprotoclient"}]

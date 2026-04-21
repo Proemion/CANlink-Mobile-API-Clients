@@ -1,0 +1,34 @@
+[project]
+name = "clmprotowrapper"
+version = "3.2.2"
+description = "Protobuf API bindings for the CANlink mobile 10000."
+authors = [
+    {name = "Proemion GmbH", email = "info@proemion.com"}
+]
+license = "Apache-2.0"
+requires-python = ">=3.12"
+keywords = ["CANlink", "CLM10k", "protobuf", "CAN"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "protobuf (>=3.14.0)",
+    "grpcio-tools (>=1.80.0,<2.0.0)",
+]
+
+[project.urls]
+Repository = "https://github.com/Proemion/CANlink-Mobile-API-Clients"
+Issues = "https://github.com/Proemion/CANlink-Mobile-API-Clients/issues"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0", "grpcio-tools"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+build = "build.py"
+packages = [{include = "clmprotowrapper"}]
