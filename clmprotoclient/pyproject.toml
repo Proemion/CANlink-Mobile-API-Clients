@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: System :: Networking",
 ]
 dependencies = [
-    "clmprotowrapper (>=3.2.2)",
+    "clmprotowrapper (>=3.3.0)",
     "websocket-client (>=1.2.3)",
     "prompt-toolkit (>=3.0.24)",
     "python-dateutil (>=2.8.1)",
