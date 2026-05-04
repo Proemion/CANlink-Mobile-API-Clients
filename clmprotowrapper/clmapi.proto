@@ -1,24 +1,318 @@
-/* ### PRIVATE_API_START ### */
-/* Protocol definition for websocket communication.
+/* Copyright 2022-2023 Proemion GmbH
  *
- * Notes on transmission: protocol buffers do not support message delimiters,
- * it's up to the applications to define how to determine when a message
- * starts or ends within the byte stream.
- * Google suggests to first transfer the size of the message to come, which
- * is what we will also be doing, see:
- * https://developers.google.com/protocol-buffers/docs/techniques#streaming
- *
- * Since we use websockets for transporting our protobuf streams, we will
- * make use of websocket messages where one protobuf message shall correspond
- * to one websockets message.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 syntax = "proto2";
 
+/* This protocol definition corresponds to CLM10000 release 3.2.2 */
 package clmproto;
-/* Include generic, non @PRODUCT_NAME@ specific message definitions. */
-import "generic.proto";
-/* ### PRIVATE_API_END ### */
+
+/* Result codes.
+ *
+ * The `enum result_code` defines codes which can be returned by the
+ * application in a response message.
+ */
+enum result_code
+{
+    /* The message received by the application is not known, perhaps one of the
+     * parties is using a different protocol version, where the new message
+     * has not yet been defined. */
+    RC_ERR_UNKNOWN_MSG = 0;
+
+    /* No error, typically this will be the normal "ack" response when
+     * everything worked as expected. */
+    RC_OK = 1;
+
+    /* The constructed message is invalid. This could also indicate a protocol
+     * mismatch, for instance when various types/enum values were not
+     * understood by the application. */
+    RC_ERR_INVALID_MSG = 2;
+
+    /* The application encountered an out of memory condition. */
+    RC_ERR_NOMEM = 3;
+
+    /* Request could not be served due to an internal application error, at
+     * this point it might be worth it to review the logs as something
+     * unexpected might have happened. */
+    RC_ERR_INTERNAL = 4;
+
+    /* Request contained configuration that could not be applied. */
+    RC_ERR_CONFIG = 5;
+
+    /* Configuration option is not known, this could again indicate a protocol
+     * mismatch between the client and the application. */
+    RC_ERR_UNKNOWN_OPTION = 6;
+};
+
+/* The enum describes events which caused the device to boot. */
+enum wake_up_reason
+{
+    /* Reserved, do not use. */
+    WAKE_UP_REASON_RESERVED = 0;
+
+    /* System boot was triggered by CLAMP15. */
+    WAKE_UP_REASON_CLAMP15 = 1;
+
+    /* System boot was triggered by CLAMP30. */
+    WAKE_UP_REASON_CLAMP30 = 2;
+
+    /* System boot was triggered by the CAN1 interface. */
+    WAKE_UP_REASON_CAN1 = 3;
+
+    /* System boot was triggered by the CAN2 interface. */
+    WAKE_UP_REASON_CAN2 = 4;
+
+    /* System boot was triggered by the CAN3 interface. */
+    WAKE_UP_REASON_CAN3 = 5;
+
+    /* System boot was triggered by an accelerometer event. */
+    WAKE_UP_REASON_ACCELEROMETER = 6;
+
+    /* The real-time interval wakes the system up after a specified time has
+     * elapsed since shutdown. */
+    WAKE_UP_REASON_RTC_INTERVAL = 7;
+
+    /* The real-time clock alarm wakes the system up at a specific time of
+     * day - daily or on specific days. */
+    WAKE_UP_REASON_RTC_ALARM = 8;
+
+    /* The system performed reboot/SW reset after the firmware update. */
+    WAKE_UP_REASON_REBOOT = 9;
+};
+
+/* Connection state of a remote machine tunnel service. */
+enum remote_machine_tunnel_connection_state
+{
+    /* Reserved, do not use */
+    RMT_CONNECTION_STATE_RESERVED = 0;
+
+    /* Initial or unknown state */
+    RMT_CONNECTION_STATE_UNKNOWN = 1;
+
+    /* Connection in progress */
+    RMT_CONNECTION_STATE_CONNECTING = 2;
+    /* Successfully connected and operational */
+
+    RMT_CONNECTION_STATE_CONNECTED = 3;
+    /* Connection has been lost or terminated */
+
+    RMT_CONNECTION_STATE_DISCONNECTED = 4;
+
+    /* Currently attempting to reestablish connection */
+    RMT_CONNECTION_STATE_RECONNECTING = 5;
+}
+
+/* Error type of a remote machine tunnel service. */
+enum remote_machine_tunnel_error_type
+{
+    /* Reserved, do not use */
+    RMT_ERROR_TYPE_RESERVED = 0;
+
+    /* Error with unknown or undetermined cause */
+    RMT_ERROR_TYPE_UNKNOWN_ERROR = 1;
+
+    /* Failed to resolve the remote address */
+    RMT_ERROR_TYPE_RESOLUTION_ERROR = 2;
+
+    /* Failed to establish connection to the remote server */
+    RMT_ERROR_TYPE_CONNECTION_ERROR = 3;
+
+    /* Protocol-level error during communication */
+    RMT_ERROR_TYPE_PROTOCOL_ERROR = 4;
+
+    /* Authentication failed */
+    RMT_ERROR_TYPE_AUTH_ERROR = 5;
+
+    /* Internal system error */
+    RMT_ERROR_TYPE_INTERNAL_ERROR = 6;
+
+    /* Heartbeat timeout */
+    RMT_ERROR_TYPE_HEARTBEAT_TIMEOUT = 7;
+}
+
+/* State of the remote machine tunnel client. */
+enum remote_machine_tunnel_client_state
+{
+    /* Reserved, do not use */
+    RMT_CLIENT_STATE_RESERVED = 0;
+
+    /* Initial or unknown state */
+    RMT_CLIENT_STATE_UNKNOWN = 1;
+
+    /* The client service is disabled */
+    RMT_CLIENT_STATE_NOT_RUNNING = 2;
+
+    /* The client service is running */
+    RMT_CLIENT_STATE_RUNNING = 3;
+
+    /* Failed to start the client */
+    RMT_CLIENT_STATE_ERROR = 4;
+}
+
+
+/* Hardware configuration state */
+message hardware_configuration
+{
+    optional bool with_battery = 1;
+    optional bool with_wifi = 2;
+};
+
+/* This message is sent out by the device each time a new connection with a
+ * communication party is established. */
+message device_info_notification
+{
+    /* NextID: 8 */
+
+    /* Current firmware version. */
+    optional string firmware_version = 1;
+
+    /* Timestamp of the last firmware update in milliseconds from epoch. */
+    optional uint64 firmware_update_time_ms = 2;
+
+    /* String identifying the OEM firmware variant. */
+    optional string oem_variant = 3;
+
+    /* Hardware version string: `<hardware version> <product code>`. For
+     * example Hw 0.0 0100A666 */
+    optional string hardware_version = 4;
+
+    /* Information which event caused the device to boot */
+    optional wake_up_reason wake_up_reason = 5;
+
+    /* API compatibility indicator, see `CFG_OPTION_UINT16_API_COMPATIBILITY`
+     * for more details. */
+    optional uint32 api_compatibility = 6;
+
+    /* Information about the device's hardware configuration */
+    optional hardware_configuration hardware_configuration = 7;
+
+    /* Current configuration name. */
+    optional string config_name = 8;
+
+    /* Current configuration version. */
+    optional string config_version = 9;
+
+    /* Timestamp of the last configuration update in milliseconds from epoch. */
+    optional uint64 config_update_time_ms = 10;
+}
+
+/* Notification about a firmware update on the device.
+ *
+ * This message is broadcasted to all connected clients as well as to the
+ * Proemion Data Portal each time a firmware update has been either attempted
+ * or performed. */
+message device_firmware_update_notification
+{
+    /* Indicator if the update was successful or not. */
+    optional bool success = 1;
+
+    /* Human readable update result or error message. */
+    optional string update_message = 2;
+
+    /* Currently running firmware version, i.e. the firmware version that was
+     * performing the update. */
+    optional string firmware_version_before_update = 3;
+
+    /* Firmware version of the update. */
+    optional string target_firmware_version = 4;
+
+    /* Timestamp of the last firmware update in milliseconds from epoch. */
+    optional uint64 firmware_update_time_ms = 5;
+}
+
+
+/* Device configuration update notification.
+ *
+ * This message is broadcasted to all connected clients as well as to the
+ * Proemion Data Portal each time a configuration update has been either
+ * attempted or performed. */
+message device_config_update_notification
+{
+    /* Indicator if the update was successful. */
+    optional bool success = 1;
+
+    /* Human readable update result message/error message. */
+    optional string update_message = 2;
+
+
+    /* Timestamp of the last config update in milliseconds from epoch. */
+    optional uint64 config_update_time_ms = 4;
+
+    /* Configuration name defined by the user via the DataPlatform */
+    optional string config_name = 5;
+
+    /* Configuration version, it is defined from the CLM10000
+     * and is part of the configuration file */
+    optional string config_version = 6;
+}
+
+/* Remote machine tunnel error info */
+message remote_machine_tunnel_error
+{
+    /* Error type */
+    optional remote_machine_tunnel_error_type type = 1;
+
+    /* Error description */
+    optional string description = 2;
+
+    /* Unix timestamp when the error occurred */
+    optional uint64 timestamp = 3;
+}
+
+/* Remote machine tunnel service state */
+message state_remote_machine_tunnel_service
+{
+    /* The name of the service as configured */
+    optional string name = 1;
+
+    /* Local address that's being forwarded */
+    optional string local_address = 2;
+
+    /* Current connection state of the control channel */
+    optional remote_machine_tunnel_connection_state connection_state = 3;
+
+    /* Unix timestamp of the last successful heartbeat */
+    optional uint64 last_heartbeat = 4;
+
+    /* Details about the last connection error */
+    optional remote_machine_tunnel_error last_error = 5;
+
+    /* Total bytes received for this service */
+    optional uint64 bytes_in = 6;
+
+    /* Total bytes sent for this service */
+    optional uint64 bytes_out = 7;
+}
+
+ /* Remote machine tunnel state */
+ message state_remote_machine_tunnel
+ {
+    /* Remote machine tunnel services */
+    repeated state_remote_machine_tunnel_service services = 1;
+
+    /* State of the remote machine tunnel client */
+    optional remote_machine_tunnel_client_state client_state = 2;
+
+    /* Unique session identifier in uuid format */
+    optional string session_id = 3;
+
+    /* Total bytes received across all services */
+    optional uint64 bytes_in = 4;
+
+    /* Total bytes sent across all services */
+    optional uint64 bytes_out = 5;
+ }
 
 /* Configuration options
  *
@@ -34,7 +328,7 @@ import "generic.proto";
  */
 enum cfg_option
 {
-    /* NextID: 156 */
+    /* NextID: 153 */
 
     /* Reserved, do not use. */
     CFG_OPTION_RESERVED = 0;
@@ -92,64 +386,7 @@ enum cfg_option
 
     /* This option is no longer supported. */
     CFG_OPTION_BOOL_ACCESS_LOCAL_UPLOAD_HTTP_ENABLED = 8;
-/* ### PRIVATE_API_START ### */
-    /* ID to be logged to the CLF header. */
-    CFG_OPTION_STR_CLF_HEADER_ID = 9;
-    /* Size threshold in bytes which triggers the upload, i.e. the data
-     * will be accumulated up to this threshold and once reached, sent
-     * to the DataPortal and cleared locally once transmitted. */
-    CFG_OPTION_UINT32_CLF_SIZE_THRESHOLD = 10;
-    /* ### PRIVATE_API_END ### */
 
-    /* ### MANAGED_CAN_API_START ### */
-    /*   - Data type: _bool_
-     *   - Default value: _false_
-     *   - Group membership: `CFG_GROUP_IF_CAN1`
-     *
-     *   Enable or disable the CAN1 interface.*/
-    CFG_OPTION_BOOL_CAN1_ENABLED = 11;
-
-    /*   - Data type: _uint32_t_
-     *   - Default value: _250000_
-     *   - Allowed values: _10000_, _20000_, _50000_, _100000_, _125000_,
-     *                     _250000_, _500000_, _800000_, _1000000_
-     *   - Group membership: `CFG_GROUP_IF_CAN1`
-     *
-     *   CAN1 interface bitrate.*/
-     CFG_OPTION_UINT32_CAN1_BITRATE = 12;
-
-    /*   - Data type: _bool_
-     *   - Default value: _false_
-     *   - Group membership: `CFG_GROUP_IF_CAN2`
-     *
-     *   Enable or disable the CAN2 interface.*/
-    CFG_OPTION_BOOL_CAN2_ENABLED = 13;
-
-    /*   - Data type: _uint32_t_
-     *   - Default value: _250000_
-     *   - Allowed values: _10000_, _20000_, _50000_, _100000_, _125000_,
-     *                     _250000_, _500000_, _800000_, _1000000_
-     *   - Group membership: `CFG_GROUP_IF_CAN2`
-     *
-     *   CAN2 interface bitrate.*/
-    CFG_OPTION_UINT32_CAN2_BITRATE = 14;
-
-    /*   - Data type: _bool_
-     *   - Default value: _false_
-     *   - Group membership: `CFG_GROUP_IF_CAN3`
-     *
-     *   Enable or disable the CAN3 interface.*/
-    CFG_OPTION_BOOL_CAN3_ENABLED = 15;
-
-    /*   - Data type: _uint32_t_
-     *   - Default value: _250000_
-     *   - Allowed values: _10000_, _20000_, _50000_, _100000_, _125000_,
-     *                     _250000_, _500000_, _800000_, _1000000_
-     *   - Group membership: `CFG_GROUP_IF_CAN3`
-     *
-     *   CAN3 interface bitrate.*/
-    CFG_OPTION_UINT32_CAN3_BITRATE = 16;
-    /* ### MANAGED_CAN_API_END ### */
 
     /*   - Data type: _bool_
      *   - Default value: _true_
@@ -270,47 +507,6 @@ enum cfg_option
      *   PIN code needed to unlock the SIM card if the PIN is enabled. */
     CFG_OPTION_STR_SIM_CURRENT_PIN = 27;
 
-    /* ### PRIVATE_API_START ### */
-    /*   - Data type: _string_
-     *   - Default value: configured automatically
-     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
-     *
-     *   Network Mode.
-     *
-     *   **Note:** this option belongs to a dynamic group and requires you to
-     *   pass the associated group name in the respective calls. */
-    CFG_OPTION_STR_IF_MODEM_NETWORK_MODE = 131;
-
-    /*   - Data type: _string_
-     *   - Default value: configured automatically
-     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
-     *
-     *   IPv4 method.
-     *
-     *   **Note:** this option belongs to a dynamic group and requires you to
-     *   pass the associated group name in the respective calls. */
-    CFG_OPTION_STR_IF_MODEM_IPV4_METHOD = 132;
-
-    /*   - Data type: _string_
-     *   - Default value: configured automatically
-     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
-     *
-     *   IPv4 address.
-     *
-     *   **Note:** this option belongs to a dynamic group and requires you to
-     *   pass the associated group name in the respective calls. */
-    CFG_OPTION_STR_IF_MODEM_IPV4_ADDRESS = 133;
-
-    /*   - Data type: _string_
-     *   - Default value: configured automatically
-     *   - Group membership: `CFG_GROUP_IF_MODEM_PROFILE`
-     *
-     *   IPv4 Gateway.
-     *
-     *   **Note:** this option belongs to a dynamic group and requires you to
-     *   pass the associated group name in the respective calls. */
-    CFG_OPTION_STR_IF_MODEM_IPV4_GATEWAY = 134;
-    /* ### PRIVATE_API_END ### */
 
     /*   - Data type: _string_
      *   - Default value: configured automatically
@@ -514,16 +710,6 @@ enum cfg_option
      *   **Note:** this option belongs to a dynamic group and requires you to
      *   pass the associated group name in the respective calls. */
     CFG_OPTION_INT64_IF_ETHERNET_IPV4_ROUTE_METRIC = 43;
-    
-    /*   - Data type: _bool_
-     *   - Default value: _false_
-     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
-     *
-     *   Enable or disable internet sharing when IPv4 method is set to shared.
-     *
-     *   **Note:** this option belongs to a dynamic group and requires you to
-     *   pass the associated group name in the respective calls. */
-    CFG_OPTION_BOOL_IF_ETHERNET_IPV4_INTERNET_SHARING_ENABLED = 153;
 
     /*   - Data type: _bool_
      *   - Default value: _true_
@@ -634,7 +820,7 @@ enum cfg_option
      *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
      *
      *   This option controls if the SSID of the WiFi network (if created by
-     *   the @PRODUCT_NAME@) is hidden or visible.
+     *   the CLM10000) is hidden or visible.
      *
      *   **Note:** this option belongs to a dynamic group and requires you to
      *   pass the associated group name in the respective calls. */
@@ -853,16 +1039,6 @@ enum cfg_option
 
     /*   - Data type: _bool_
      *   - Default value: _false_
-     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
-     *
-     *   Enable or disable internet sharing when IPv4 method is set to shared.
-     *
-     *   **Note:** this option belongs to a dynamic group and requires you to
-     *   pass the associated group name in the respective calls. */
-    CFG_OPTION_BOOL_IF_WIFI_IPV4_INTERNET_SHARING_ENABLED = 154;
-
-    /*   - Data type: _bool_
-     *   - Default value: _false_
      *   - Group membership: `CFG_GROUP_GNSS`
      *
      *   This option controls Global Navigation Satellite System data
@@ -899,16 +1075,16 @@ enum cfg_option
      *   other services. */
     CFG_OPTION_BOOL_GNSS_GALILEO_ENABLED = 73;
 
-    /*  GNSS multicast support has been removed in version 3.2.2. */
+    /*  GNSS multicast support has been removed in version 3.3.0. */
     CFG_OPTION_BOOL_GNSS_MULTICAST_ENABLED = 74;
 
-    /*  GNSS multicast support has been removed in version 3.2.2. */
+    /*  GNSS multicast support has been removed in version 3.3.0. */
     CFG_OPTION_STR_GNSS_MULTICAST_ADDRESS = 75;
 
-    /*  GNSS multicast support has been removed in version 3.2.2. */
+    /*  GNSS multicast support has been removed in version 3.3.0. */
     CFG_OPTION_UINT16_GNSS_MULTICAST_PORT = 76;
 
-    /*  GNSS multicast support has been removed in version 3.2.2. */
+    /*  GNSS multicast support has been removed in version 3.3.0. */
     CFG_OPTION_UINT16_GNSS_MULTICAST_RATE_LIMIT = 77;
 
     /*   - Data type: _bool_
@@ -969,56 +1145,6 @@ enum cfg_option
      *   Refer to `CFG_OPTION_UiNT16_API_COMPATIBILITLY` for more details. */
     CFG_OPTION_UINT16_CFG_VERSION = 81;
 
-/* ### SITEMANAGER_API_START ### */
-    /*   - Data type: _string_
-     *   - Default value: _disabled_
-     *   - Allowed values: _enabled_, _disabled_, _input-controlled_
-     *   - Group membership: `CFG_GROUP_SITEMANAGER`
-     *
-     *   Enable or disable SecomeaSite Manager. The setting `input-controlled`
-     *   reacts to the state of analog input 1, SiteManager is started when
-     *   the input is high and is terminated when the input is low.
-     *
-     *   **Note:** this extension may not be available in all firmware versions
-     *   and thus SiteManager configuration options may not be supported
-     *   depending on the firmware. */
-    CFG_OPTION_STR_SITEMANAGER_ENABLED = 82;
-
-    /*   - Data type: _string_
-     *   - Default value: _gm01-emea.ifm.com_
-     *   - Group membership: `CFG_GROUP_SITEMANAGER`
-     *
-     *   SiteManager gateway/server. */
-    CFG_OPTION_STR_SITEMANAGER_SERVER = 83;
-
-    /*   - Data type: _string_
-     *   - Default value: _F35059532317468AA1A5BE1E3CB_
-     *   - Group membership: `CFG_GROUP_SITEMANAGER`
-     *
-     *   SiteManager domain token. */
-    CFG_OPTION_STR_SITEMANAGER_DOMAIN = 84;
-
-    /*   - Data type: _string_
-     *   - Default value: not set
-     *   - Group membership: `CFG_GROUP_SITEMANAGER`
-     *
-     *   SiteManager web proxy address. */
-    CFG_OPTION_STR_SITEMANAGER_WEB_PROXY_ADDRESS = 85;
-
-    /*   - Data type: _string_
-     *   - Default value: not set
-     *   - Group membership: `CFG_GROUP_SITEMANAGER`
-     *
-     *   SiteManager web proxy username. */
-    CFG_OPTION_STR_SITEMANAGER_WEB_PROXY_USERNAME = 86;
-
-    /*   - Data type: _string_
-     *   - Default value: not set
-     *   - Group membership: `CFG_GROUP_SITEMANAGER`
-     *
-     *   SiteManager web proxy password. */
-    CFG_OPTION_STR_SITEMANAGER_WEB_PROXY_PASSWORD = 87;
-/* ### SITEMANAGER_API_END ### */
 
     /*   - Data type: _bool_
      *   - Default value: _true_
@@ -1029,7 +1155,7 @@ enum cfg_option
     CFG_OPTION_BOOL_PWR_SLEEP_MODE_ENABLED = 88;
 
     /*   - Data type: _uint16_t_
-     *   - Default value: _900_
+     *   - Default value: _10_
      *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
      *
      *   Sleep Mode Delay determines how long the device remains active after
@@ -1167,15 +1293,6 @@ enum cfg_option
      *   configured as well. */
     CFG_OPTION_UINT32_IF_BRIDGE_WIFI_CHANNEL = 100;
 
-    /* ### PRIVATE_API_START ### */
-    /*   - Data type: _string_
-     *   - Default value: _hotspot_
-     *   - Allowed values: _hotspot_, _client_,  _ad-hoc_
-     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
-     *
-     *   This option configures the wifi mode. */
-    CFG_OPTION_STR_IF_BRIDGE_WIFI_MODE = 130;
-    /* ### PRIVATE_API_END ### */
 
     /*   - Data type: _string_
      *   - Default value: _auto_
@@ -1192,7 +1309,7 @@ enum cfg_option
      *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
      *
      *   This option controls if the SSID of the WiFi network (if created by
-     *   the @PRODUCT_NAME@) is hidden or visible. */
+     *   the CLM10000) is hidden or visible. */
     CFG_OPTION_BOOL_IF_BRIDGE_WIFI_HIDDEN_SSID = 102;
 
     /*   - Data type: _bytes_
@@ -1347,13 +1464,6 @@ enum cfg_option
      *   internet, depending on interface or connection availability. */
     CFG_OPTION_INT64_IF_BRIDGE_IPV4_ROUTE_METRIC = 118;
 
-    /*   - Data type: _bool_
-     *   - Default value: _false_
-     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
-     *
-     *   Enable or disable internet sharing when IPv4 method is set to shared. */
-    CFG_OPTION_BOOL_IF_BRIDGE_IPV4_INTERNET_SHARING_ENABLED = 155;
-
     /*   - Data type: _string_
      *   - Default value: _eSIM_
      *   - Allowed values: _eSIM_, _Plug-In SIM_
@@ -1383,7 +1493,6 @@ enum cfg_option
      *   This option allows to force the requested ip-type to IPv4 only in the initial EPS Bearer. */
     CFG_OPTION_BOOL_EPS_BEARER_IPV4_ONLY = 129;
     
-    /* ### REMOTE_MACHINE_TUNNEL_API_START ### */
     /*   - Data type: _bool_
      *   - Default value: _true_
      *   - Group membership: `CFG_OPTION_BOOL_REMOTE_MACHINE_TUNNEL_ALLOWED`
@@ -1391,9 +1500,7 @@ enum cfg_option
      *   Allow remote machine tunnel to be used from the device itself
      */
     CFG_OPTION_BOOL_REMOTE_MACHINE_TUNNEL_ALLOWED = 122;
-    /* ### REMOTE_MACHINE_TUNNEL_API_END ### */
 
-    /* ### JSON_API_API_START ### */
     /*   - Data type: _bool_
      *   - Default value: _false_
      *   - Group membership: `CFG_GROUP_ACCESS`
@@ -1410,28 +1517,7 @@ enum cfg_option
      *   Valid only for HTTP GET requests.
      */
     CFG_OPTION_STR_ACCESS_JSON_API_HTTP_IPV4_WHITELIST = 136;
-    /* ### JSON_API_API_END ### */
 
-    /* ### CODESYS_UPLOAD_API_START ### */
-    /* ### PRIVATE_API_START ### */
-    /*   - Data type: _uint32_t_
-     *   - Default value: 102400
-     *   - Group membership: `CFG_GROUP_CLF`
-     *
-     *   Configures the size (in bytes) to trigger
-     *   the upload of CLF files created by CODESYS.
-     */
-    CFG_OPTION_UINT32_CLF_CODESYS_SIZE_THRESHOLD = 137;
-
-    /*   - Data type: _string_
-     *   - Default value: CLM10000_CODESYS
-     *   - Group membership: `CFG_GROUP_CLF`
-     *
-     *   Configures the ID to be logged to the CLF header
-     *   created by CODESYS.
-     */
-    CFG_OPTION_STR_CLF_CODESYS_HEADER_ID = 138;
-    /* ### PRIVATE_API_END ### */
 
     /*   - Data type: _bool_
      *   - Default value: _true_
@@ -1446,18 +1532,7 @@ enum cfg_option
      *
      *   Upload period of the collected CODESYS data logs. */
     CFG_OPTION_UINT16_CODESYS_UPLOAD_RATE_LIMIT = 140;
-    /* ### CODESYS_UPLOAD_API_END ### */
 
-    /* ### REMOTE_CONNECT_API_START ### */
-    /*   - Data type: _string_
-     *   - Default value: _enabled_
-     *   - Allowed values: _enabled_, _disabled_
-     *   - Group membership: `CFG_GROUP_REMOTE_CONNECT`
-     *
-     *   Enable or disable remoteConnect functionality. When enabled, the device
-     *   will attempt to establish a connection to the remoteConnect service. */
-    CFG_OPTION_STR_REMOTE_CONNECT_ENABLED = 147;
-    /* ### REMOTE_CONNECT_API_END ### */
 
     /*   - Data type: _string_
      *   - Default value: _auto_
@@ -1531,22 +1606,10 @@ enum cfg_group
     /* Device access related options. */
     CFG_GROUP_ACCESS = 3;
 
-/* ### PRIVATE_API_START ### */
-    /* CLF settings */
-    CFG_GROUP_CLF = 4;
-/* ### PRIVATE_API_END ### */
     /* Parent group containing sub groups of individual device interface
      * configurations. */
     CFG_GROUP_INTERFACES = 5;
 
-    /* ### MANAGED_CAN_API_START ### */
-    /* CAN1 interface settings. */
-    CFG_GROUP_IF_CAN1 = 6;
-    /* CAN2 interface settings. */
-    CFG_GROUP_IF_CAN2 = 7;
-    /* CAN3 interface settings. */
-    CFG_GROUP_IF_CAN3 = 8;
-    /* ### MANAGED_CAN_API_END ### */
 
     /* General LTE modem interface settings, containing further groups for SIM
      * card options and dynamic connection profile groups. */
@@ -1594,11 +1657,6 @@ enum cfg_group
     /* This group contains options which do not fit anywhere else. */
     CFG_GROUP_OTHER = 19;
 
-    /* ### SITEMANAGER_API_START ### */
-    /* This group is only present in firmware builds with Secomea SiteManager
-     * support and contains SiteManager related settings. */
-    CFG_GROUP_SITEMANAGER = 20;
-    /* ### SITEMANAGER_API_END ### */
 
     /* This group contains options related to sleep mode configuration. */
     CFG_GROUP_POWER_MANAGEMENT = 21;
@@ -1612,23 +1670,15 @@ enum cfg_group
     /* Initial EPS Bearer settings. */
     CFG_GROUP_EPS_BEARER = 24;
 
-    /* ### REMOTE_MACHINE_TUNNEL_API_START ### */
     /* This group contains options related to the remote machine tunnel. */
     CFG_GROUP_REMOTE_MACHINE_TUNNEL = 25;
-    /* ### REMOTE_MACHINE_TUNNEL_API_END ### */
 
-    /* ### CODESYS_UPLOAD_API_START ### */
     /* Logging settings group */
     CFG_GROUP_LOGGING = 26;
 
     /* CODESYS upload settings group */
     CFG_GROUP_CODESYS_UPLOAD = 27;
-    /* ### CODESYS_UPLOAD_API_END ### */
 
-    /* ### REMOTE_CONNECT_API_START ### */
-    /* This group contains options related to remoteConnect functionality */
-    CFG_GROUP_REMOTE_CONNECT = 28;
-    /* ### REMOTE_CONNECT_API_END ### */
 
     /* Cellular configuration for modem. */
     CFG_GROUP_CELLULAR = 29;
@@ -1708,73 +1758,7 @@ enum firmware_update_state
 }
 
 
-/* ### SITEMANAGER_API_START ### */
-/* SiteManager state color identifier.
- *
- * This enum forwards the states of the Secomea SiteManager. Please consult
- * the SiteManager manual for information regarding the color codes.
- */
-enum sitemanager_color_code
-{
-    /* Reserved, do not use. */
-    SITEMANAGER_STATE_COLOR_RESERVED = 0;
 
-    /* State could not be retrieved or SiteManager is disabled. */
-    SITEMANAGER_STATE_COLOR_NONE = 1;
-
-    /* State color code as specified in the SiteManager emedded manual. */
-    SITEMANAGER_STATE_COLOR_RED = 2;
-
-    /* State color code as specified in the SiteManager emedded manual. */
-    SITEMANAGER_STATE_COLOR_GREEN = 3;
-
-    /* State color code as specified in the SiteManager emedded manual. */
-    SITEMANAGER_STATE_COLOR_BLUE = 4;
-
-    /* State color code as specified in the SiteManager emedded manual. */
-    SITEMANAGER_STATE_COLOR_YELLOW = 5;
-}
-/* ### SITEMANAGER_API_END ### */
-
-/* ### REMOTE_CONNECT_API_START ### */
-/* Connection state for remoteConnect */
-enum remote_connect_connection_state
-{
-   /* Reserved, do not use */
-   REMOTE_CONNECT_CONNECTION_STATE_RESERVED = 0;
-
-   /* No status or unknown connection status */
-   REMOTE_CONNECT_CONNECTION_STATE_NONE = 1;
-
-   /* Not connected to relay server */
-   REMOTE_CONNECT_CONNECTION_STATE_NOT_CONNECTED = 2;
-
-   /* Connected to relay server */
-   REMOTE_CONNECT_CONNECTION_STATE_CONNECTED_TO_RELAY = 3;
-
-   /* Pending incoming connection request */
-   REMOTE_CONNECT_CONNECTION_STATE_CONNECTION_REQUEST = 4;
-
-   /* Connected to peer */
-   REMOTE_CONNECT_CONNECTION_STATE_CONNECTED_TO_PEER = 5;
-}
-
-/* Type of remoteConnect connection */
-enum remote_connect_connection_type
-{
-   /* Reserved, do not use */
-   REMOTE_CONNECT_CONNECTION_TYPE_RESERVED = 0;
-
-   /* No type available or unknown connection type */
-   REMOTE_CONNECT_CONNECTION_TYPE_NONE = 1;
-
-   /* Connection through relay server */
-   REMOTE_CONNECT_CONNECTION_TYPE_RELAY_SERVER = 2;
-
-   /* Direct peer-to-peer connection */
-   REMOTE_CONNECT_CONNECTION_TYPE_DIRECT = 3;
-}
-/* ### REMOTE_CONNECT_API_END ### */
 
 /* State of a network interface.
  *
@@ -2298,7 +2282,7 @@ message remove_config_group_request
     required string group_name = 1;
 }
 
-/* This message describes the @PRODUCT_NAME@ configuration file format.
+/* This message describes the CLM10000 configuration file format.
  *
  * It works both ways, i.e. for exporting and for importing,
  * i.e. we will export our configuration as this serialized message when
@@ -2372,7 +2356,7 @@ message config_export_request
 /* Response to a configuratoin export request.
  *
  * The response contains binary configuration data that can be saved to a file
- * and reapplied to any compatible @PRODUCT_NAME@ device later via the configuration
+ * and reapplied to any compatible CLM10000 device later via the configuration
  * upload feature. */
 message config_export_response
 {
@@ -2416,7 +2400,7 @@ message device_reset_request
  * while "upload" can only POST files for further transfer to the Proemion Data
  * Portal. This allows to keep the web UI and thus all configuration options
  * locked for users or devices which only need to transfer files, but are
- * otherwise not allowed to change the configuration of the @PRODUCT_NAME@. */
+ * otherwise not allowed to change the configuration of the CLM10000. */
 message set_password_request
 {
     /* Password will be changed for the given user name, currently either
@@ -2545,21 +2529,10 @@ message get_state_request
     /* Information if a firmware update is ongoing and what state it is in. */
     optional bool state_firmware_update = 4;
 
-/* ### SITEMANAGER_API_START ### */
-    /* Connection state of the Secomea SiteManager (if present in the given
-     * firmware build. */
-    optional bool state_sitemanager = 5;
-/* ### SITEMANAGER_API_END ### */
 
-/* ### REMOTE_CONNECT_API_START ### */
-   /* remoteConnect state information */
-   optional bool state_remote_connect = 6;
-/* ### REMOTE_CONNECT_API_END ### */
 
-/* ### REMOTE_MACHINE_TUNNEL_API_START ### */
    /* Remote machine tunnel state information */
    optional bool state_remote_machine_tunnel = 7;
-/* ### REMOTE_MACHINE_TUNNEL_API_END ### */
 }
 
 /* Network connection information. */
@@ -2656,39 +2629,7 @@ message state_firmware_update
     optional uint32 transfer_progress_percent = 3;
 }
 
-/* ### SITEMANAGER_API_START ### */
-/* State of the Secomea SiteManager.
- *
- * **Note:** Secomea SiteManager may not be available in all firmware
- * builds. */
-message state_sitemanager
-{
-    /* Color code as defined in the SiteManager embedded function reference
-     * API (consult Secomea documentation for more details). */
-    optional sitemanager_color_code color_code = 1;
 
-    /* Human readable state message as provided by SiteManager. */
-    optional string description = 2;
-}
-/* ### SITEMANAGER_API_END ### */
-
-/* ### REMOTE_CONNECT_API_START ### */
-/* State information about remoteConnect */
-message state_remote_connect
-{
-   /* Current connection status */
-   optional remote_connect_connection_state connection_state = 1;
-
-   /* Region of the relay server */
-   optional string relay_region = 2;
-
-   /* Type of connection (relay server or direct) */
-   optional remote_connect_connection_type connection_type = 3;
-
-   /* Human readable connection state description. */
-   optional string state_description = 4;
-}
-/* ### REMOTE_CONNECT_API_END ### */
 
 /* Response message to a state request.
  *
@@ -2705,10 +2646,6 @@ message get_state_response
     /* Data Portal related state, currently only connectivity information. */
     optional state_dataportal dataportal = 2;
 
-/* ### SITEMANAGER_API_START ### */
-    /* SiteManager state, may not be available in all firmware versions. */
-    optional state_sitemanager sitemanager = 3;
-/* ### SITEMANAGER_API_END ### */
 
     /* System information */
     optional state_system system = 4;
@@ -2716,15 +2653,9 @@ message get_state_response
     /* Firmware update related information. */
     optional state_firmware_update firmware_update = 5;
 
-/* ### REMOTE_CONNECT_API_START ### */
-   /* remoteConnect state information */
-   optional state_remote_connect remote_connect = 6;
-/* ### REMOTE_CONNECT_API_END ### */
 
- /* ### REMOTE_MACHINE_TUNNEL_API_START ### */
    /* Remote machine tunnel state information */
    optional state_remote_machine_tunnel remote_machine_tunnel = 7;
- /* ### REMOTE_MACHINE_TUNNEL_API_END ### */
 }
 
 /* This notification will be sent out each time a state of a network interface
@@ -2821,37 +2752,12 @@ message msg
         /* Response to the configuration export request, containing binary
         * configuration file data. */
         config_export_response config_export_response = 13;
-        /* ### PRIVATE_API_START ### */
-        /* Configuration file that should be applied, this is an internal
-         * message and must not be used. Rather POST the configuration file to
-         * the local config update link. */
-        string config_file = 14;
-
-        /* Request the device to download configuration from the given link and
-         * perform a configuration update. This message is used by the
-         * Data Portal, for local updates one should rather POST the
-         * configuration file to the devices config upload URL in order to
-         * perform a configuration update. */
-        config_update_request config_update_request = 15;
-        /* ### PRIVATE_API_END ### */
 
         /* This message is sent out by the device each time a configuration
          * update has been either attempted or performed. */
         device_config_update_notification device_config_update_notification = 16;
         /* Request a device reset, response is a standard_response message. */
         device_reset_request device_reset_request = 17;
-        /* ### PRIVATE_API_START ### */
-        /* Notification from the Data Portal that a file is available for
-         * download. This message is used by the Data Portal and should be
-         * ignored in the local API use case. */
-        transfer_to_device_request transfer_to_device_request = 18;
-
-        /* Information about the newly established session, sent as a
-         * notification from the Data Portal as soon as a connection to the CU
-         * was established. This message should be ignored in the local API
-         use case. */
-        session_info_notification session_info_notification = 19;
-        /* ### PRIVATE_API_END ### */
 
         /* This message is sent out by the device each time a new connection has
          * been established. You will receive it unsolicited right after
@@ -2861,13 +2767,6 @@ message msg
         /* This message is sent out by the device each time the device firmware
          * has been updated or when an attempted update has failed. */
         device_firmware_update_notification device_firmware_update_notification = 21;
-        /* ### PRIVATE_API_START ### */
-        /* Request the device to download firmware from the given link and
-         * perform a firmware upgrade. This message is used by the Data Portal,
-         * for local updates one should rather POST the firmware image to the
-         * devices firmware upload URL in order to perform an update. */
-        firmware_update_request firmware_update_request = 22;
-        /* ### PRIVATE_API_END ### */
 
         /* Abort an ongoing firmware update. */
         firmware_update_abort_request firmware_update_abort_request = 23;
@@ -2909,14 +2808,7 @@ message msg
         /* Control the power state of the device. */
         power_state_request set_power_state_request = 37;
 
-        /* ### REMOTE_MACHINE_TUNNEL_API_START ### */
         /* Remote machine tunnel state information */
         state_remote_machine_tunnel remote_machine_tunnel_notification = 38;
-        /* ### REMOTE_MACHINE_TUNNEL_API_END ### */
-
-        /* ### CODESYS_OTA_API_START ### */
-        /* CODESYS update notification */
-        device_config_update_notification codesys_update_notification = 39;
-        /* ### CODESYS_OTA_API_END ### */
     }
 }

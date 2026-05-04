@@ -1,5 +1,5 @@
 '''
-This build script uses the clm.proto to generate the clmapi_pb2.py module, which serves as a wrapper
+This build script uses the clmapi.proto to generate the clmapi_pb2.py module, which serves as a wrapper
 for the protobuf API. It also runs on poetry build.
 '''
 
@@ -9,7 +9,7 @@ from grpc_tools import protoc
 
 def build(setup_kwargs):
     root = os.path.dirname(os.path.abspath(__file__))
-    proto_file = os.path.join(root, "clm.proto")
+    proto_file = os.path.join(root, "clmapi.proto")
     out_dir = os.path.join(root, "clmprotowrapper")
 
     ret = protoc.main([
