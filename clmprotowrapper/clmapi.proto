@@ -15,7 +15,7 @@
 
 syntax = "proto2";
 
-/* This protocol definition corresponds to CLM10000 release 3.2.2 */
+/* This protocol definition corresponds to CLM10000 release 3.3.0 */
 package clmproto;
 
 /* Result codes.
@@ -328,7 +328,7 @@ message state_remote_machine_tunnel_service
  */
 enum cfg_option
 {
-    /* NextID: 153 */
+    /* NextID: 156 */
 
     /* Reserved, do not use. */
     CFG_OPTION_RESERVED = 0;
@@ -710,6 +710,16 @@ enum cfg_option
      *   **Note:** this option belongs to a dynamic group and requires you to
      *   pass the associated group name in the respective calls. */
     CFG_OPTION_INT64_IF_ETHERNET_IPV4_ROUTE_METRIC = 43;
+    
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_IF_ETHERNET_PROFILE`
+     *
+     *   Enable or disable internet sharing when IPv4 method is set to shared.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_ETHERNET_IPV4_INTERNET_SHARING_ENABLED = 153;
 
     /*   - Data type: _bool_
      *   - Default value: _true_
@@ -1039,6 +1049,16 @@ enum cfg_option
 
     /*   - Data type: _bool_
      *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
+     *
+     *   Enable or disable internet sharing when IPv4 method is set to shared.
+     *
+     *   **Note:** this option belongs to a dynamic group and requires you to
+     *   pass the associated group name in the respective calls. */
+    CFG_OPTION_BOOL_IF_WIFI_IPV4_INTERNET_SHARING_ENABLED = 154;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
      *   - Group membership: `CFG_GROUP_GNSS`
      *
      *   This option controls Global Navigation Satellite System data
@@ -1075,16 +1095,16 @@ enum cfg_option
      *   other services. */
     CFG_OPTION_BOOL_GNSS_GALILEO_ENABLED = 73;
 
-    /*  GNSS multicast support has been removed in version 3.3.0. */
+    /*  GNSS multicast support has been removed in version 3.2.2. */
     CFG_OPTION_BOOL_GNSS_MULTICAST_ENABLED = 74;
 
-    /*  GNSS multicast support has been removed in version 3.3.0. */
+    /*  GNSS multicast support has been removed in version 3.2.2. */
     CFG_OPTION_STR_GNSS_MULTICAST_ADDRESS = 75;
 
-    /*  GNSS multicast support has been removed in version 3.3.0. */
+    /*  GNSS multicast support has been removed in version 3.2.2. */
     CFG_OPTION_UINT16_GNSS_MULTICAST_PORT = 76;
 
-    /*  GNSS multicast support has been removed in version 3.3.0. */
+    /*  GNSS multicast support has been removed in version 3.2.2. */
     CFG_OPTION_UINT16_GNSS_MULTICAST_RATE_LIMIT = 77;
 
     /*   - Data type: _bool_
@@ -1155,7 +1175,7 @@ enum cfg_option
     CFG_OPTION_BOOL_PWR_SLEEP_MODE_ENABLED = 88;
 
     /*   - Data type: _uint16_t_
-     *   - Default value: _10_
+     *   - Default value: _900_
      *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
      *
      *   Sleep Mode Delay determines how long the device remains active after
@@ -1463,6 +1483,13 @@ enum cfg_option
      *   you to prioritize one interface over the other when accessing the
      *   internet, depending on interface or connection availability. */
     CFG_OPTION_INT64_IF_BRIDGE_IPV4_ROUTE_METRIC = 118;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
+     *
+     *   Enable or disable internet sharing when IPv4 method is set to shared. */
+    CFG_OPTION_BOOL_IF_BRIDGE_IPV4_INTERNET_SHARING_ENABLED = 155;
 
     /*   - Data type: _string_
      *   - Default value: _eSIM_

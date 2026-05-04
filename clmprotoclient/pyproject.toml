@@ -1,6 +1,6 @@
 [project]
 name = "clmprotoclient"
-version = "1.0.2"
+version = "1.0.3"
 description = "Client to communicate with the CANlink mobile 10000 protobuf API."
 authors = [
     {name = "Proemion GmbH", email = "info@proemion.com"}
@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: System :: Networking",
 ]
 dependencies = [
-    "clmprotowrapper (>=3.2.2)",
+    "clmprotowrapper (>=3.3.0)",
     "websocket-client (>=1.2.3)",
     "prompt-toolkit (>=3.0.24)",
     "python-dateutil (>=2.8.1)",
