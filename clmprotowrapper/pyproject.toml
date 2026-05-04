@@ -1,6 +1,6 @@
 [project]
 name = "clmprotowrapper"
-version = "3.2.2"
+version = "3.3.0"
 description = "Protobuf API bindings for the CANlink mobile 10000."
 authors = [
     {name = "Proemion GmbH", email = "info@proemion.com"}
