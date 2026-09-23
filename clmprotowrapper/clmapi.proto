@@ -15,7 +15,7 @@
 
 syntax = "proto2";
 
-/* This protocol definition corresponds to CLM10000 release 3.3.0 */
+/* This protocol definition corresponds to CANlink mobile 10000 release 3.4.0 */
 package clmproto;
 
 /* Result codes.
@@ -172,7 +172,7 @@ message hardware_configuration
  * communication party is established. */
 message device_info_notification
 {
-    /* NextID: 8 */
+    /* NextID: 15 */
 
     /* Current firmware version. */
     optional string firmware_version = 1;
@@ -205,6 +205,18 @@ message device_info_notification
 
     /* Timestamp of the last configuration update in milliseconds from epoch. */
     optional uint64 config_update_time_ms = 10;
+
+    /* Current device codesys app name. */
+    optional string codesys_name = 11;
+
+    /* Current device codesys app version. */
+    optional string codesys_version = 12;
+
+    /* Timestamp of the last codesys update in milliseconds from epoch. */
+    optional uint64 codesys_update_time_ms = 13;
+
+    /* ICCID of the currently used SIM card. */
+    optional string iccid = 14;
 }
 
 /* Notification about a firmware update on the device.
@@ -252,7 +264,7 @@ message device_config_update_notification
     /* Configuration name defined by the user via the DataPlatform */
     optional string config_name = 5;
 
-    /* Configuration version, it is defined from the CLM10000
+    /* Configuration version, it is defined from the CANlink mobile 10000
      * and is part of the configuration file */
     optional string config_version = 6;
 }
@@ -328,7 +340,7 @@ message state_remote_machine_tunnel_service
  */
 enum cfg_option
 {
-    /* NextID: 156 */
+    /* NextID: 163 */
 
     /* Reserved, do not use. */
     CFG_OPTION_RESERVED = 0;
@@ -830,7 +842,7 @@ enum cfg_option
      *   - Group membership: `CFG_GROUP_IF_WIFI_PROFILE`
      *
      *   This option controls if the SSID of the WiFi network (if created by
-     *   the CLM10000) is hidden or visible.
+     *   the CANlink mobile 10000) is hidden or visible.
      *
      *   **Note:** this option belongs to a dynamic group and requires you to
      *   pass the associated group name in the respective calls. */
@@ -1329,7 +1341,7 @@ enum cfg_option
      *   - Group membership: `CFG_GROUP_IF_BRIDGE_PROFILE`
      *
      *   This option controls if the SSID of the WiFi network (if created by
-     *   the CLM10000) is hidden or visible. */
+     *   the CANlink mobile 10000) is hidden or visible. */
     CFG_OPTION_BOOL_IF_BRIDGE_WIFI_HIDDEN_SSID = 102;
 
     /*   - Data type: _bytes_
@@ -1611,6 +1623,65 @@ enum cfg_option
      */
     CFG_OPTION_BOOL_CODESYS_EDGE_GATEWAY_ENABLED = 152;
 
+    /*   - Data type: _string_
+     *   - Default value: _info_
+     *   - Allowed values: _info_, _warning_, _error_, _debug_
+     *   - Group membership: `CFG_GROUP_LOG_SEVERITY`
+     *
+     *   Configures the logging severity level for the CANlink mobile 10000 daemon. */
+    CFG_OPTION_STR_LOG_SEVERITY_MAIN_APP = 156;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable CAN1 as a wake-up source. After the device has entered the
+     *   sleep mode, activity on the CAN1 bus will wake-up the device. */
+    CFG_OPTION_BOOL_PWR_CAN1_WAKE_UP_ENABLED = 157;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable CAN1 as a sleep inhibitor. While enabled, ongoing traffic on
+     *   the CAN1 bus postpones and restarts the sleep mode countdown,
+     *   keeping the device awake for as long as communication continues. */
+    CFG_OPTION_BOOL_PWR_CAN1_SLEEP_INHIBIT_ENABLED = 158;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable CAN2 as a wake-up source. After the device has entered the
+     *   sleep mode, activity on the CAN2 bus will wake-up the device. */
+    CFG_OPTION_BOOL_PWR_CAN2_WAKE_UP_ENABLED = 159;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable CAN2 as a sleep inhibitor. While enabled, ongoing traffic on
+     *   the CAN2 bus postpones and restarts the sleep mode countdown,
+     *   keeping the device awake for as long as communication continues. */
+    CFG_OPTION_BOOL_PWR_CAN2_SLEEP_INHIBIT_ENABLED = 160;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable CAN3 as a wake-up source. After the device has entered the
+     *   sleep mode, activity on the CAN3 bus will wake-up the device. */
+    CFG_OPTION_BOOL_PWR_CAN3_WAKE_UP_ENABLED = 161;
+
+    /*   - Data type: _bool_
+     *   - Default value: _false_
+     *   - Group membership: `CFG_GROUP_POWER_MANAGEMENT`
+     *
+     *   Enable CAN3 as a sleep inhibitor. While enabled, ongoing traffic on
+     *   the CAN3 bus postpones and restarts the sleep mode countdown,
+     *   keeping the device awake for as long as communication continues. */
+    CFG_OPTION_BOOL_PWR_CAN3_SLEEP_INHIBIT_ENABLED = 162;
+
 };
 
 /* Identifier which group the given option belongs to.
@@ -1619,7 +1690,7 @@ enum cfg_option
  * UIs to highlight options that belong to the same group. */
 enum cfg_group
 {
-    /* NextID: 31 */
+    /* NextID: 33 */
 
     /* Reserved, do not use. */
     CFG_GROUP_RESERVED = 0;
@@ -1712,6 +1783,12 @@ enum cfg_group
 
     /* CODESYS settings group. */
     CFG_GROUP_CODESYS = 30;
+
+    /* System logs settings group. */
+    CFG_GROUP_SYSTEM_LOGS = 31;
+
+    /* Log severity settings group. */
+    CFG_GROUP_LOG_SEVERITY = 32;
 
 };
 
@@ -2309,7 +2386,7 @@ message remove_config_group_request
     required string group_name = 1;
 }
 
-/* This message describes the CLM10000 configuration file format.
+/* This message describes the CANlink mobile 10000 configuration file format.
  *
  * It works both ways, i.e. for exporting and for importing,
  * i.e. we will export our configuration as this serialized message when
@@ -2383,7 +2460,7 @@ message config_export_request
 /* Response to a configuratoin export request.
  *
  * The response contains binary configuration data that can be saved to a file
- * and reapplied to any compatible CLM10000 device later via the configuration
+ * and reapplied to any compatible CANlink mobile 10000 device later via the configuration
  * upload feature. */
 message config_export_response
 {
@@ -2427,7 +2504,7 @@ message device_reset_request
  * while "upload" can only POST files for further transfer to the Proemion Data
  * Portal. This allows to keep the web UI and thus all configuration options
  * locked for users or devices which only need to transfer files, but are
- * otherwise not allowed to change the configuration of the CLM10000. */
+ * otherwise not allowed to change the configuration of the CANlink mobile 10000. */
 message set_password_request
 {
     /* Password will be changed for the given user name, currently either
@@ -2560,6 +2637,9 @@ message get_state_request
 
    /* Remote machine tunnel state information */
    optional bool state_remote_machine_tunnel = 7;
+
+   /* CODESYS state information */
+   optional bool state_codesys = 8;
 }
 
 /* Network connection information. */
@@ -2658,6 +2738,13 @@ message state_firmware_update
 
 
 
+
+/* State information for the CODESYS integration. */
+message state_codesys
+{
+}
+
+
 /* Response message to a state request.
  *
  * The response will only contain fields that have been set in the
@@ -2683,6 +2770,9 @@ message get_state_response
 
    /* Remote machine tunnel state information */
    optional state_remote_machine_tunnel remote_machine_tunnel = 7;
+
+   /* CODESYS state information */
+   optional state_codesys codesys = 8;
 }
 
 /* This notification will be sent out each time a state of a network interface
@@ -2729,6 +2819,18 @@ message standard_response
     optional string description = 2;
 }
 
+/* Request CODESYS user credentials. */
+message get_codesys_credentials_request
+{
+}
+
+/* Response to a get_codesys_credentials_request. */
+message get_codesys_credentials_response
+{
+    optional string username = 1;
+    optional string password = 2;
+}
+
 /** Main protocol message.
  *
  * All available messages must be encoded within this message, this is the
@@ -2746,7 +2848,7 @@ message msg
 
     oneof submsg
     {
-        /* NextID: 39 */
+        /* NextID: 42 */
 
         /* Standard response submessage. */
         standard_response standard_response = 2;
@@ -2837,5 +2939,14 @@ message msg
 
         /* Remote machine tunnel state information */
         state_remote_machine_tunnel remote_machine_tunnel_notification = 38;
+
+        /* CODESYS update notification */
+        device_config_update_notification codesys_update_notification = 39;
+
+        /* Request CODESYS user credentials. */
+        get_codesys_credentials_request get_codesys_credentials_request = 40;
+
+        /* Response to a get_codesys_credentials_request. */
+        get_codesys_credentials_response get_codesys_credentials_response = 41;
     }
 }
