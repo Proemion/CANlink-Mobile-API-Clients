@@ -1,6 +1,6 @@
 [project]
 name = "clmprotowrapper"
-version = "3.4.0"
+version = "3.4.1"
 description = "Protobuf API bindings for the CANlink mobile 10000."
 authors = [
     {name = "Proemion GmbH", email = "info@proemion.com"}
@@ -16,9 +16,11 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Networking",
 ]
+# The protobuf floor must match the "Protobuf Python Version" header in
+# clmprotowrapper/clmapi_pb2.py, which comes from the grpcio-tools pinned in
+# [build-system]. Bump both together.
 dependencies = [
-    "protobuf (>=3.14.0)",
-    "grpcio-tools (>=1.80.0,<2.0.0)",
+    "protobuf (>=7.35.1,<8.0.0)",
 ]
 
 [project.urls]
@@ -26,7 +28,11 @@ Repository = "https://github.com/Proemion/CANlink-Mobile-API-Clients"
 Issues = "https://github.com/Proemion/CANlink-Mobile-API-Clients/issues"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0", "grpcio-tools"]
+# build.py regenerates clmprotowrapper/clmapi_pb2.py on every build, and the
+# grpcio-tools version decides the protobuf version stamped into it (1.85.1
+# stamps 7.35.1). Pinned so every build stamps the same version. Bump together
+# with the protobuf floor in [project] dependencies.
+requires = ["poetry-core>=2.0.0,<3.0.0", "grpcio-tools==1.85.1"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
